@@ -224,7 +224,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	qName := state.Name()
 	qType := state.Type()
 
-	log.Infof("%#v", state)
 	log.Info(qName, qType)
 	domainName := qName
 
@@ -313,7 +312,10 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 func (m *Mysql) getRecords(domainID int, host string, qtype string) ([]Record, error) {
 	var records []Record
-	rows, err := m.DB.Query("SELECT id, domain_id, name, type, value, ttl FROM "+m.RecordsTable+" WHERE domain_id=? and name=? and type=?", domainID, host, qtype)
+	baseQuerySql := "SELECT id, domain_id, name, type, value, ttl FROM " + m.RecordsTable + " WHERE domain_id=? and name=? and type=?"
+	log.Info(baseQuerySql)
+	rows, err := m.DB.Query(baseQuerySql, domainID, host, qtype)
+	log.Info(rows, err)
 	if err != nil {
 		return nil, err
 	}
