@@ -161,6 +161,10 @@ func (m *Mysql) OnStartup() error {
 
 func (m *Mysql) rePing() {
 	for {
+		if m.DB == nil {
+			time.Sleep(time.Minute)
+			continue
+		}
 		if err := m.DB.Ping(); err != nil {
 			logger.Errorf("Failed to ping database: %s", err)
 			time.Sleep(m.RetryInterval)
