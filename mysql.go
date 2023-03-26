@@ -185,6 +185,8 @@ func (m *Mysql) reGetDomain() {
 		rows, err := m.DB.Query("SELECT id, name FROM " + m.DomainsTable)
 		if err != nil {
 			logger.Errorf("Failed to query domains: %s", err)
+			time.Sleep(time.Minute)
+			continue
 		}
 
 		for rows.Next() {
