@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -50,6 +49,7 @@ type Record struct {
 }
 
 func MakeMysqlPlugin() *Mysql {
+	dnsLogger.Debug("Make Mysql plugin")
 	return &Mysql{}
 }
 
@@ -59,7 +59,7 @@ func (m *Mysql) Name() string {
 
 func (m *Mysql) ParseConfig(c *caddy.Controller) error {
 	for c.Next() {
-		log.Printf("%#v", c)
+		dnsLogger.Infof("%#v", c)
 		for c.NextBlock() {
 			switch c.Val() {
 			case "dsn":
