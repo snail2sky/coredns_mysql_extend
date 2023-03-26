@@ -173,6 +173,10 @@ func (m *Mysql) rePing() {
 func (m *Mysql) reGetDomain() {
 	var domainMap = make(map[string]int, 0)
 	for {
+		if m.DB == nil {
+			time.Sleep(time.Minute)
+			continue
+		}
 		rows, err := m.DB.Query("SELECT id, name FROM " + m.DomainsTable)
 		if err != nil {
 			logger.Errorf("Failed to query domains: %s", err)
