@@ -65,6 +65,7 @@ func (m *Mysql) ParseConfig(c *caddy.Controller) error {
 		if !c.Args(&m.DomainsTable, &m.RecordsTable) {
 			return c.ArgErr()
 		}
+		log.Info(m.DomainsTable, m.RecordsTable, m)
 
 		// for c.NextBlock() {
 		// 	switch c.Val() {
