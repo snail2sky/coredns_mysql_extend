@@ -279,6 +279,13 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 			}
 
+			rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", qName, cnameRecord.TTL, cnameRecord.Type, cnameRecord.Value))
+			if err != nil {
+				logger.Errorf("Failed to create DNS record: %s", err)
+				continue
+			}
+			answers = append(answers, rr)
+
 			cname2Records, err := m.getRecords(cnameZoneID, cnameHost, cnameZone, qType)
 			logger.Debugf("domainID %d, host %s, qType %s, records %#v", cnameZoneID, cnameHost, qType, records)
 
