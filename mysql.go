@@ -59,7 +59,7 @@ func (m *Mysql) Name() string {
 }
 
 func (m *Mysql) ParseConfig(c *caddy.Controller) error {
-	log.Debugf("hello world, debug")
+	log.Info("hello world, debug")
 	// for c.Next() {
 	// 	log.Debugf("%#v", c)
 	// 	if !c.Args(&m.DomainsTable, &m.RecordsTable) {
