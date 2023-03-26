@@ -26,6 +26,7 @@ var log = clog.NewWithPlugin(pluginName)
 
 type Mysql struct {
 	Next          plugin.Handler
+	dsn           string
 	DB            *sql.DB
 	Cache         cache.Cache
 	TTL           uint32
@@ -62,27 +63,32 @@ func (m *Mysql) ParseConfig(c *caddy.Controller) error {
 	log.Info("hello world, debug")
 	for c.Next() {
 		log.Infof("%#v", c)
-		if !c.Args(&m.DomainsTable, &m.RecordsTable) {
-			return c.ArgErr()
-		}
+		// if !c.Args(&m.DomainsTable, &m.RecordsTable) {
+		// 	return c.ArgErr()
+		// }
 		log.Infof("%#v", m)
 
-		// for c.NextBlock() {
-		// 	switch c.Val() {
-		// 	case "cache":
-		// 		if !c.Args(&m.TTL) {
-		// 			return c.ArgErr()
-		// 		}
-		// 	case "retry_interval":
-		// 		if !c.Args(&m.RetryInterval) {
-		// 			return c.ArgErr()
-		// 		}
-		// 	case "log_enabled":
-		// 		m.LogEnabled = true
-		// 	default:
-		// 		return c.Errf("unknown property '%s'", c.Val())
-		// 	}
-		// }
+		for c.NextBlock() {
+			switch c.Val() {
+			case "dsn":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
+				m.dsn = c.Val()
+			// case "cache":
+			// 	if !c.Args(&m.TTL) {
+			// 		return c.ArgErr()
+			// 	}
+			// case "retry_interval":
+			// 	if !c.Args(&m.RetryInterval) {
+			// 		return c.ArgErr()
+			// 	}
+			case "log_enabled":
+				m.LogEnabled = true
+			default:
+				return c.Errf("unknown property '%s'", c.Val())
+			}
+		}
 	}
 	return nil
 }
@@ -122,13 +128,12 @@ func (m *Mysql) createTables() error {
 func (m *Mysql) OnStartup() error {
 	m.Once.Do(func() {
 		// Initialize database connection pool
-		db, err := sql.Open("mysql", "user:password@tcp(localhost:3306)/dns")
+		db, err := sql.Open("mysql", m.dsn)
 		if err != nil {
 			log.Debugf("[FATAL] Failed to connect to database: %s", err)
 		}
 
 		m.DB = db
-
 		// Set default values
 		if m.TTL == 0 {
 			m.TTL = defaultTTL
@@ -141,6 +146,11 @@ func (m *Mysql) OnStartup() error {
 		// Start retry loop
 		go m.retryLoop()
 	})
+
+	err := m.createTables()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
