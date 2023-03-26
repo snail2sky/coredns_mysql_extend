@@ -1,4 +1,4 @@
-module mysql
+module github.com/snail/coredns-mysql
 
 go 1.20
 
