@@ -290,7 +290,6 @@ func (m *Mysql) load() {
 func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	answers := make([]dns.RR, 0)
 	var records []Record
-	var degradeAnswers []dns.RR
 	var rrString string
 	state := request.Request{W: w, Req: r}
 
@@ -331,12 +330,11 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	if err != nil {
 		logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
 		logger.Debugf("Degrade records %#v", m.degradeCache)
-		answers, ok := m.degradeQuery(degradeRecord)
+		tmpAnswers, ok := m.degradeQuery(degradeRecord)
 		if !ok {
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 		}
-		degradeAnswers = answers
-		goto DegradeEnterpoint
+		answers = tmpAnswers
 	}
 
 	// try query CNAME type of record
@@ -427,7 +425,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// 	m.Cache.Set(key, answers[0], time.Duration(m.TTL)*time.Second)
 	// }
 DegradeEnterpoint:
-	answers = append(answers, degradeAnswers...)
 	// Return result
 	if len(answers) > 0 {
 		msg := new(dns.Msg)
