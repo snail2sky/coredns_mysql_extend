@@ -60,29 +60,29 @@ func (m *Mysql) Name() string {
 
 func (m *Mysql) ParseConfig(c *caddy.Controller) error {
 	log.Info("hello world, debug")
-	// for c.Next() {
-	// 	log.Debugf("%#v", c)
-	// 	if !c.Args(&m.DomainsTable, &m.RecordsTable) {
-	// 		return c.ArgErr()
-	// 	}
+	for c.Next() {
+		log.Debugf("%#v", c)
+		if !c.Args(&m.DomainsTable, &m.RecordsTable) {
+			return c.ArgErr()
+		}
 
-	// 	// for c.NextBlock() {
-	// 	// 	switch c.Val() {
-	// 	// 	case "cache":
-	// 	// 		if !c.Args(&m.TTL) {
-	// 	// 			return c.ArgErr()
-	// 	// 		}
-	// 	// 	case "retry_interval":
-	// 	// 		if !c.Args(&m.RetryInterval) {
-	// 	// 			return c.ArgErr()
-	// 	// 		}
-	// 	// 	case "log_enabled":
-	// 	// 		m.LogEnabled = true
-	// 	// 	default:
-	// 	// 		return c.Errf("unknown property '%s'", c.Val())
-	// 	// 	}
-	// 	// }
-	// }
+		// for c.NextBlock() {
+		// 	switch c.Val() {
+		// 	case "cache":
+		// 		if !c.Args(&m.TTL) {
+		// 			return c.ArgErr()
+		// 		}
+		// 	case "retry_interval":
+		// 		if !c.Args(&m.RetryInterval) {
+		// 			return c.ArgErr()
+		// 		}
+		// 	case "log_enabled":
+		// 		m.LogEnabled = true
+		// 	default:
+		// 		return c.Errf("unknown property '%s'", c.Val())
+		// 	}
+		// }
+	}
 	return nil
 }
 
