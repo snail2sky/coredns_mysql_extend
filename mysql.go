@@ -41,7 +41,8 @@ type Domain struct {
 
 type Record struct {
 	ID       int
-	DomainID int
+	ZoneID   int
+	ZoneName string
 	Name     string
 	Type     string
 	Value    string
@@ -186,7 +187,7 @@ func (m *Mysql) reGetDomain() {
 	}
 }
 
-func (m *Mysql) getDomainInfo(fqdn string) (int, string, error) {
+func (m *Mysql) getDomainInfo(fqdn string) (int, string, string, error) {
 	var (
 		id    int
 		host  string
@@ -198,18 +199,18 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, error) {
 	// Only should case once but more. TODO
 	for i := range items {
 		zone = strings.Join(items[i:], zoneSeparator)
-		id, ok = m.getDomainID(zone)
+		id, ok = m.getZoneID(zone)
 		host = strings.Join(items[:i], zoneSeparator)
 		if ok {
 			logger.Debugf("Query zone %s in DB", zone)
-			return id, host, nil
+			return id, host, zone, nil
 		}
 	}
 
-	return id, host, fmt.Errorf("Domain not exist")
+	return id, host, zone, fmt.Errorf("Domain not exist")
 }
 
-func (m *Mysql) getDomainID(zone string) (int, bool) {
+func (m *Mysql) getZoneID(zone string) (int, bool) {
 	id, ok := m.domainMap[zone]
 	return id, ok
 }
@@ -229,7 +230,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	qName := state.Name()
 	qType := state.Type()
 
-	logger.Debugf("qname %s, qtype %s", qName, qType)
+	logger.Debugf("FQDN %s, DNS query type %s", qName, qType)
 
 	// Check cache first
 	// if m.Cache != nil {
@@ -244,22 +245,59 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// }
 
 	// Query database
-	domainID, host, err := m.getDomainInfo(qName)
+	zoneID, host, zone, err := m.getDomainInfo(qName)
+	logger.Debugf("ZoneID %d, host %s, zone %s", zoneID, host, zone)
 
 	if err != nil {
-		logger.Errorf("Failed to get domain %s from database: %s", qName, err)
+		logger.Error(err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
-	records, err := m.getRecords(domainID, host, qType)
-	logger.Debugf("domainID %d, host %s, qType %s, records %#v", domainID, host, qType, records)
+	var answers []dns.RR
+	// full match
+	records, err := m.getRecords(zoneID, host, zone, qType)
+	logger.Debugf("domainID %d, host %s, qType %s, records %#v", zoneID, host, qType, records)
 	if err != nil {
 		logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
+	// try query CNAME type of record
+	if len(records) == zero {
+		cnameRecords, err := m.getRecords(zoneID, host, zone, cnameQtype)
+		logger.Debugf("domainID %d, host %s, qType %s, records %#v", zoneID, host, cnameQtype, records)
+		if err != nil {
+			logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
+			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+		}
+		for _, cnameRecord := range cnameRecords {
+			cnameZoneID, cnameHost, cnameZone, err := m.getDomainInfo(cnameRecord.Value)
+			logger.Debugf("ZoneID %d, host %s, zone %s", cnameZoneID, cnameHost, cnameZone)
+
+			if err != nil {
+				logger.Error(err)
+				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+			}
+
+			cname2Records, err := m.getRecords(cnameZoneID, cnameHost, cnameZone, qType)
+			logger.Debugf("domainID %d, host %s, qType %s, records %#v", cnameZoneID, cnameHost, qType, records)
+
+			if err != nil {
+				logger.Errorf("Failed to get domain %s from database: %s", cnameHost+zoneSeparator+cnameZone, err)
+				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+			}
+			for _, cname2Record := range cname2Records {
+				rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", cname2Record.Name, cname2Record.TTL, cname2Record.Type, cname2Record.Value))
+				if err != nil {
+					logger.Errorf("Failed to create DNS record: %s", err)
+					continue
+				}
+				answers = append(answers, rr)
+			}
+		}
+	}
+
 	// Process records
-	var answers []dns.RR
 	for _, record := range records {
 		rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", record.Name, record.TTL, record.Type, record.Value))
 		if err != nil {
@@ -272,13 +310,13 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// Handle wildcard domains
 	if len(answers) == zero && strings.Count(qName, zoneSeparator) > 1 {
 		baseZone := m.getBaseZone(qName)
-		domainID, ok := m.getDomainID(baseZone)
+		domainID, ok := m.getZoneID(baseZone)
 		wildcardName := wildcard + zoneSeparator + baseZone
 		if !ok {
 			logger.Errorf("Failed to get domain %s from database: %s", qName, err)
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 		}
-		records, err := m.getRecords(domainID, wildcard, qType)
+		records, err := m.getRecords(domainID, wildcard, zone, qType)
 		if err != nil {
 			logger.Errorf("Failed to get records for domain %s from database: %s", wildcardName, err)
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
@@ -312,12 +350,13 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 }
 
-func (m *Mysql) getRecords(domainID int, host string, qtype string) ([]Record, error) {
+func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]Record, error) {
 	var records []Record
 	baseQuerySql := `SELECT id, domain_id, name, type, value, ttl FROM ` + m.RecordsTable + ` WHERE domain_id=? and name=? and type=?`
+
 	logger.Debugf("Baseurl %v, doamin_id %v, host %v, qtype %v", baseQuerySql, domainID, host, qtype)
+
 	rows, err := m.DB.Query(baseQuerySql, domainID, host, qtype)
-	logger.Debugf("rows %#v, err %v", rows, err)
 	if err != nil {
 		return nil, err
 	}
@@ -325,10 +364,11 @@ func (m *Mysql) getRecords(domainID int, host string, qtype string) ([]Record, e
 
 	for rows.Next() {
 		var record Record
-		err := rows.Scan(&record.ID, &record.DomainID, &record.Name, &record.Type, &record.Value, &record.TTL)
+		err := rows.Scan(&record.ID, &record.ZoneID, &record.Name, &record.Type, &record.Value, &record.TTL)
 		if err != nil {
 			return nil, err
 		}
+		record.ZoneName = zone
 		logger.Debugf("record %#v", record)
 		records = append(records, record)
 	}
