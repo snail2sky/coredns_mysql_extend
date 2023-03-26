@@ -3,7 +3,9 @@ package coredns_mysql_extend
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +26,7 @@ type Mysql struct {
 	Next          plugin.Handler
 	dsn           string
 	DB            *sql.DB
+	DumpFile      string
 	Cache         cache.Cache
 	degradeCache  map[Record][]dns.RR
 	domainMap     map[string]int
@@ -40,6 +43,7 @@ type Domain struct {
 	Name string
 }
 
+type PureRecord []map[string]string
 type Record struct {
 	ID       int
 	ZoneID   int
@@ -49,6 +53,7 @@ type Record struct {
 	Value    string
 	fqdn     string
 	TTL      uint32
+	rrString string
 }
 
 func MakeMysqlPlugin() *Mysql {
@@ -78,6 +83,11 @@ func (m *Mysql) ParseConfig(c *caddy.Controller) error {
 					return c.ArgErr()
 				}
 				m.RecordsTable = c.Val()
+			case "dumpfile":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
+				m.DumpFile = c.Val()
 			// case "cache":
 			// 	if !c.Args(&m.TTL) {
 			// 		return c.ArgErr()
@@ -144,7 +154,7 @@ func (m *Mysql) OnStartup() error {
 		if m.RetryInterval == 0 {
 			m.RetryInterval = time.Second * 5
 		}
-
+		m.load()
 		// Start retry loop
 		go m.rePing()
 		go m.reGetDomain()
@@ -156,7 +166,6 @@ func (m *Mysql) OnStartup() error {
 	}
 	logger.Debugf("Load degrade data")
 	// TODO
-	m.degradeCache = make(map[Record][]dns.RR, 0)
 	return nil
 }
 
@@ -235,8 +244,53 @@ func (m *Mysql) degradeQuery(record Record) ([]dns.RR, bool) {
 	return answers, ok
 }
 
+func (m *Mysql) dump() {
+	var pureRecord PureRecord
+	pureRecord = make([]map[string]string, 0)
+	for record := range m.degradeCache {
+		pureRecord = append(pureRecord, map[string]string{
+			fmt.Sprintf("%s:%s", record.fqdn, record.Type): record.rrString,
+		})
+
+	}
+
+	content, err := json.Marshal(pureRecord)
+	if err != nil {
+		return
+	}
+	if err := os.WriteFile(m.DumpFile, content, safeMode); err != nil {
+		logger.Error(err)
+	}
+}
+
+func (m *Mysql) load() {
+	m.degradeCache = make(map[Record][]dns.RR, 0)
+	pureRecord := make([]map[string]string, 0)
+	content, err := os.ReadFile(m.DumpFile)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(content, &pureRecord)
+	if err != nil {
+		return
+	}
+	for _, rMap := range pureRecord {
+		for queryKey, rrString := range rMap {
+			queryKeySlice := strings.Split(queryKey, keySeparator)
+			fqdn, qType := queryKeySlice[0], queryKeySlice[1]
+			rr, err := dns.NewRR(rrString)
+			record := Record{fqdn: fqdn, Type: qType}
+			if err != nil {
+				continue
+			}
+			m.degradeCache[record] = append(m.degradeCache[record], rr)
+		}
+	}
+}
+
 func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var degradeAnswers []dns.RR
+	var rrString string
 	state := request.Request{W: w, Req: r}
 
 	// Get domain name
@@ -300,7 +354,9 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 			}
 
-			rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", qName, cnameRecord.TTL, cnameRecord.Type, cnameRecord.Value))
+			rrString = fmt.Sprintf("%s %d IN %s %s", qName, cnameRecord.TTL, cnameRecord.Type, cnameRecord.Value)
+			degradeRecord.rrString = rrString
+			rr, err := dns.NewRR(rrString)
 			if err != nil {
 				logger.Errorf("Failed to create DNS record: %s", err)
 				continue
@@ -411,6 +467,7 @@ func (m *Mysql) OnShutdown() error {
 	if m.DB != nil {
 		m.DB.Close()
 	}
+	m.dump()
 	return nil
 }
 
