@@ -60,14 +60,8 @@ func (m *Mysql) Name() string {
 }
 
 func (m *Mysql) ParseConfig(c *caddy.Controller) error {
-	log.Info("hello world, debug")
 	for c.Next() {
 		log.Infof("%#v", c)
-		// if !c.Args(&m.DomainsTable, &m.RecordsTable) {
-		// 	return c.ArgErr()
-		// }
-		log.Infof("%#v", m)
-
 		for c.NextBlock() {
 			switch c.Val() {
 			case "dsn":

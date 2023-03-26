@@ -15,9 +15,8 @@ func init() {
 func setup(c *caddy.Controller) error {
 
 	mysql := MakeMysqlPlugin()
-	log.Info("start parse")
 	mysql.ParseConfig(c)
-	log.Info("stop parse")
+	log.Info(mysql.dsn)
 
 	c.OnStartup(mysql.OnStartup)
 	c.OnShutdown(mysql.OnShutdown)
