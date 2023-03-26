@@ -29,6 +29,7 @@ type Mysql struct {
 	dsn           string
 	DB            *sql.DB
 	Cache         cache.Cache
+	domainMap     map[string]int
 	TTL           uint32
 	RetryInterval time.Duration
 	DomainsTable  string
@@ -148,7 +149,8 @@ func (m *Mysql) OnStartup() error {
 		}
 
 		// Start retry loop
-		go m.retryLoop()
+		go m.rePing()
+		go m.reGetDomain()
 	})
 
 	err := m.createTables()
@@ -158,15 +160,71 @@ func (m *Mysql) OnStartup() error {
 	return nil
 }
 
+func (m *Mysql) rePing() {
+	for {
+		if err := m.DB.Ping(); err != nil {
+			log.Debugf("[ERROR] Failed to ping database: %s", err)
+			time.Sleep(m.RetryInterval)
+			continue
+		}
+		time.Sleep(time.Minute)
+	}
+}
+
+func (m *Mysql) reGetDomain() {
+	var domainMap = make(map[string]int, 0)
+	for {
+		rows, err := m.DB.Query("SELECT id, name FROM " + m.DomainsTable)
+		if err != nil {
+			log.Error(err)
+		}
+
+		for rows.Next() {
+			var domain Domain
+			err := rows.Scan(&domain.ID, &domain.Name)
+			if err != nil {
+				log.Error(err)
+			}
+			domainMap[domain.Name] = domain.ID
+		}
+		m.domainMap = domainMap
+		time.Sleep(time.Minute)
+	}
+}
+
+func (m *Mysql) getDomainID(fqdn string) (int, error) {
+	var (
+		id    int
+		ok    bool
+		zone  = fqdn
+		items = strings.Split(zone, ".")
+	)
+
+	for i := range items {
+		zone = strings.Join(items[i:], ".")
+		log.Info(zone)
+		id, ok = m.domainMap[zone]
+		if ok {
+			return id, nil
+		}
+	}
+
+	return id, fmt.Errorf("Domain not exist")
+
+}
+
 func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 
 	// Get domain name
 
-	fqdnName := state.Name()
+	qName := state.Name()
+	qType := state.Type()
+
 	log.Infof("%#v", state)
-	log.Info(fqdnName)
-	domainName := fqdnName
+	log.Info(qName, qType)
+	domainName := qName
+
 	// if !strings.HasSuffix(domainName, ".") {
 	// 	domainName += "."
 	// }
@@ -184,19 +242,14 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// }
 
 	// Query database
-	domain, err := m.getDomain(domainName)
-	log.Info(domain)
+	domainID, err := m.getDomainID(qName)
 
 	if err != nil {
 		log.Debugf("[ERROR] Failed to get domain %s from database: %s", domainName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
-	if domain == nil {
-		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
-	}
-
-	records, err := m.getRecords(domain.ID)
+	records, err := m.getRecords(domainID)
 	log.Info(records)
 	if err != nil {
 		log.Debugf("[ERROR] Failed to get records for domain %s from database: %s", domainName, err)
@@ -219,7 +272,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// Handle wildcard domains
 	if len(answers) == 0 && strings.Count(domainName, ".") > 1 {
 		wildcardName := "*." + strings.Join(strings.Split(domainName, ".")[1:], ".")
-		records, err := m.getRecords(domain.ID)
+		records, err := m.getRecords(domainID)
 		if err != nil {
 			log.Debugf("[ERROR] Failed to get records for domain %s from database: %s", wildcardName, err)
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
@@ -255,18 +308,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 }
 
-func (m *Mysql) getDomain(name string) (*Domain, error) {
-	var domain Domain
-	err := m.DB.QueryRow("SELECT id, name FROM "+m.DomainsTable+" WHERE name=?", name).Scan(&domain.ID, &domain.Name)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &domain, nil
-}
-
 func (m *Mysql) getRecords(domainID int) ([]Record, error) {
 	var records []Record
 	rows, err := m.DB.Query("SELECT id, domain_id, name, type, value, ttl FROM "+m.RecordsTable+" WHERE domain_id=?", domainID)
@@ -284,17 +325,6 @@ func (m *Mysql) getRecords(domainID int) ([]Record, error) {
 		records = append(records, record)
 	}
 	return records, nil
-}
-
-func (m *Mysql) retryLoop() {
-	for {
-		if err := m.DB.Ping(); err != nil {
-			log.Debugf("[ERROR] Failed to ping database: %s", err)
-			time.Sleep(m.RetryInterval)
-			continue
-		}
-		time.Sleep(time.Minute)
-	}
 }
 
 func (m *Mysql) OnShutdown() error {
