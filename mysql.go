@@ -49,7 +49,7 @@ type Record struct {
 	TTL      uint32
 }
 
-func MakeMysqlPlugin() plugin.Plugin {
+func MakeMysqlPlugin() *Mysql {
 	return &Mysql{}
 }
 
@@ -64,22 +64,22 @@ func (m *Mysql) ParseConfig(c *caddy.Controller) error {
 			return c.ArgErr()
 		}
 
-		for c.NextBlock() {
-			switch c.Val() {
-			case "cache":
-				if !c.Args(&m.TTL) {
-					return c.ArgErr()
-				}
-			case "retry_interval":
-				if !c.Args(&m.RetryInterval) {
-					return c.ArgErr()
-				}
-			case "log_enabled":
-				m.LogEnabled = true
-			default:
-				return c.Errf("unknown property '%s'", c.Val())
-			}
-		}
+		// for c.NextBlock() {
+		// 	switch c.Val() {
+		// 	case "cache":
+		// 		if !c.Args(&m.TTL) {
+		// 			return c.ArgErr()
+		// 		}
+		// 	case "retry_interval":
+		// 		if !c.Args(&m.RetryInterval) {
+		// 			return c.ArgErr()
+		// 		}
+		// 	case "log_enabled":
+		// 		m.LogEnabled = true
+		// 	default:
+		// 		return c.Errf("unknown property '%s'", c.Val())
+		// 	}
+		// }
 	}
 	return nil
 }
@@ -165,7 +165,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// Query database
 	domain, err := m.getDomain(domainName)
 	if err != nil {
-		log.Printf("[ERROR] Failed to get domain %s from database: %s", domainName, err)
+		log.Debugf("[ERROR] Failed to get domain %s from database: %s", domainName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
@@ -175,7 +175,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 	records, err := m.getRecords(domain.ID)
 	if err != nil {
-		log.Printf("[ERROR] Failed to get records for domain %s from database: %s", domainName, err)
+		log.Debugf("[ERROR] Failed to get records for domain %s from database: %s", domainName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
@@ -185,7 +185,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		if record.Type == "A" || record.Type == "AAAA" || record.Type == "CNAME" || record.Type == "SRV" || record.Type == "SOA" || record.Type == "NS" || record.Type == "PTR" {
 			rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", record.Name, record.TTL, record.Type, record.Value))
 			if err != nil {
-				log.Printf("[ERROR] Failed to create DNS record: %s", err)
+				log.Debugf("[ERROR] Failed to create DNS record: %s", err)
 				continue
 			}
 			answers = append(answers, rr)
@@ -282,9 +282,9 @@ func (m *Mysql) Debug() {
 	log.Printf("[DEBUG] MySQL plugin configuration: %+v", m)
 }
 
-func (m *Mysql) Metrics() []plugin.Metric {
-	return nil
-}
+// func (m *Mysql) Metrics() []plugin.Metric {
+// 	return nil
+// }
 
 func MysqlPlugin(c context.Context, dsn string, domainsTable string, recordsTable string, ttl uint32, retryInterval time.Duration, logEnabled bool) (plugin.Plugin, error) {
 	return &Mysql{
