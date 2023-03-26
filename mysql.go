@@ -245,13 +245,12 @@ func (m *Mysql) degradeQuery(record Record) ([]dns.RR, bool) {
 }
 
 func (m *Mysql) dump() {
-	var pureRecord PureRecord
-	pureRecord = make([]map[string]string, 0)
+	pureRecord := make([]map[string]string, 0)
 	for record := range m.degradeCache {
+		logger.Debugf("Record %#v", record)
 		pureRecord = append(pureRecord, map[string]string{
 			fmt.Sprintf("%s:%s", record.fqdn, record.Type): record.rrString,
 		})
-
 	}
 
 	content, err := json.Marshal(pureRecord)
