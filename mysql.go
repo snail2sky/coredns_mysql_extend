@@ -17,11 +17,6 @@ import (
 	"github.com/miekg/dns"
 )
 
-const (
-	defaultTTL = 300
-	pluginName = "mysql"
-)
-
 var log = clog.NewWithPlugin(pluginName)
 
 type Mysql struct {
@@ -199,21 +194,32 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, error) {
 		host  string
 		ok    bool
 		zone  = fqdn
-		items = strings.Split(zone, ".")
+		items = strings.Split(zone, zoneSeparator)
 	)
 
 	for i := range items {
-		zone = strings.Join(items[i:], ".")
+		zone = strings.Join(items[i:], zoneSeparator)
 		log.Infof("zone %#v", zone)
 		id, ok = m.domainMap[zone]
-		host = strings.Join(items[:i], ".")
+		host = strings.Join(items[:i], zoneSeparator)
 		if ok {
 			return id, host, nil
 		}
 	}
 
 	return id, host, fmt.Errorf("Domain not exist")
+}
 
+func (m *Mysql) getDomainID(zone string) (int, bool) {
+	id, ok := m.domainMap[zone]
+	return id, ok
+}
+
+func (m *Mysql) getBaseZone(fqdn string) string {
+	if strings.Count(fqdn, zoneSeparator) > 1 {
+		return strings.Join(strings.Split(fqdn, zoneSeparator)[1:], zoneSeparator)
+	}
+	return rootZone
 }
 
 func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -225,7 +231,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	qType := state.Type()
 
 	log.Infof("qname %s, qtype %s", qName, qType)
-	domainName := qName
 
 	// if !strings.HasSuffix(domainName, ".") {
 	// 	domainName += "."
@@ -247,50 +252,52 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	domainID, host, err := m.getDomainInfo(qName)
 
 	if err != nil {
-		log.Debugf("[ERROR] Failed to get domain %s from database: %s", domainName, err)
+		log.Debugf("[ERROR] Failed to get domain %s from database: %s", qName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
 	records, err := m.getRecords(domainID, host, qType)
 	log.Infof("records %#v", records)
 	if err != nil {
-		log.Debugf("[ERROR] Failed to get records for domain %s from database: %s", domainName, err)
+		log.Debugf("[ERROR] Failed to get records for domain %s from database: %s", qName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
 	// Process records
 	var answers []dns.RR
 	for _, record := range records {
-		if record.Type == "A" || record.Type == "AAAA" || record.Type == "CNAME" || record.Type == "SRV" || record.Type == "SOA" || record.Type == "NS" || record.Type == "PTR" {
-			rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", record.Name, record.TTL, record.Type, record.Value))
+		rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", record.Name, record.TTL, record.Type, record.Value))
+		if err != nil {
+			log.Debugf("[ERROR] Failed to create DNS record: %s", err)
+			continue
+		}
+		answers = append(answers, rr)
+	}
+
+	// Handle wildcard domains
+	if len(answers) == 0 && strings.Count(qName, zoneSeparator) > 1 {
+		baseZone := m.getBaseZone(qName)
+		domainID, ok := m.getDomainID(baseZone)
+		wildcardName := wildcard + zoneSeparator + baseZone
+		if !ok {
+			log.Infof("[ERROR] Failed to get domain %s from database: %s", qName, err)
+			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+		}
+		records, err := m.getRecords(domainID, wildcard, qType)
+		if err != nil {
+			log.Infof("[ERROR] Failed to get records for domain %s from database: %s", wildcardName, err)
+			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+		}
+
+		for _, record := range records {
+			rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", wildcardName, record.TTL, record.Type, record.Value))
 			if err != nil {
-				log.Debugf("[ERROR] Failed to create DNS record: %s", err)
+				log.Infof("[ERROR] Failed to create DNS record: %s", err)
 				continue
 			}
 			answers = append(answers, rr)
 		}
 	}
-
-	// Handle wildcard domains
-	// if len(answers) == 0 && strings.Count(domainName, ".") > 1 {
-	// 	wildcardName := "*." + strings.Join(strings.Split(domainName, ".")[1:], ".")
-	// 	records, err := m.getRecords(domainID)
-	// 	if err != nil {
-	// 		log.Debugf("[ERROR] Failed to get records for domain %s from database: %s", wildcardName, err)
-	// 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
-	// 	}
-
-	// 	for _, record := range records {
-	// 		if record.Type == "A" || record.Type == "AAAA" || record.Type == "CNAME" || record.Type == "SRV" || record.Type == "SOA" || record.Type == "NS" || record.Type == "PTR" {
-	// 			rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", wildcardName, record.TTL, record.Type, record.Value))
-	// 			if err != nil {
-	// 				log.Debugf("[ERROR] Failed to create DNS record: %s", err)
-	// 				continue
-	// 			}
-	// 			answers = append(answers, rr)
-	// 		}
-	// 	}
-	// }
 
 	// Cache result
 	// if m.Cache != nil && len(answers) > 0 {
