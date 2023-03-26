@@ -49,7 +49,6 @@ type Record struct {
 }
 
 func MakeMysqlPlugin() *Mysql {
-	logger.Debug("Make Mysql plugin")
 	return &Mysql{}
 }
 
@@ -59,7 +58,6 @@ func (m *Mysql) Name() string {
 
 func (m *Mysql) ParseConfig(c *caddy.Controller) error {
 	for c.Next() {
-		logger.Debugf("%#v", c)
 		for c.NextBlock() {
 			switch c.Val() {
 			case "dsn":
@@ -85,8 +83,6 @@ func (m *Mysql) ParseConfig(c *caddy.Controller) error {
 			// 	if !c.Args(&m.RetryInterval) {
 			// 		return c.ArgErr()
 			// 	}
-			case "log_enabled":
-				m.LogEnabled = true
 			default:
 				return c.Errf("unknown property '%s'", c.Val())
 			}
