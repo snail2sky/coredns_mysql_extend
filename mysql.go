@@ -163,9 +163,11 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 	// Get domain name
 	domainName := state.Name()
+	log.Info(domainName)
 	if !strings.HasSuffix(domainName, ".") {
 		domainName += "."
 	}
+	log.Info(domainName)
 
 	// Check cache first
 	// if m.Cache != nil {
@@ -181,6 +183,8 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 	// Query database
 	domain, err := m.getDomain(domainName)
+	log.Info(domain)
+
 	if err != nil {
 		log.Debugf("[ERROR] Failed to get domain %s from database: %s", domainName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
@@ -191,6 +195,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	}
 
 	records, err := m.getRecords(domain.ID)
+	log.Info(records)
 	if err != nil {
 		log.Debugf("[ERROR] Failed to get records for domain %s from database: %s", domainName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
