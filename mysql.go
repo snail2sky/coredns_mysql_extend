@@ -131,7 +131,7 @@ func (m *Mysql) OnStartup() error {
 		// Initialize database connection pool
 		db, err := sql.Open("mysql", m.dsn)
 		if err != nil {
-			logger.Errorf("Failed to connect to database: %s", err)
+			logger.Errorf("Failed to open database: %s", err)
 		}
 
 		m.DB = db
@@ -162,10 +162,6 @@ func (m *Mysql) OnStartup() error {
 
 func (m *Mysql) rePing() {
 	for {
-		if m.DB == nil {
-			time.Sleep(time.Minute)
-			continue
-		}
 		if err := m.DB.Ping(); err != nil {
 			logger.Errorf("Failed to ping database: %s", err)
 			time.Sleep(m.RetryInterval)
@@ -178,10 +174,6 @@ func (m *Mysql) rePing() {
 func (m *Mysql) reGetDomain() {
 	var domainMap = make(map[string]int, 0)
 	for {
-		if m.DB == nil {
-			time.Sleep(time.Minute)
-			continue
-		}
 		rows, err := m.DB.Query("SELECT id, name FROM " + m.DomainsTable)
 		if err != nil {
 			logger.Errorf("Failed to query domains: %s", err)
@@ -282,7 +274,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	logger.Debugf("domainID %d, host %s, qType %s, records %#v", zoneID, host, qType, records)
 	if err != nil {
 		logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
-
+		logger.Debugf("Degrade records %#v", m.degradeCache)
 		answers, ok := m.degradeQuery(degradeRecord)
 		if !ok {
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
@@ -392,8 +384,6 @@ DegradeEnterpoint:
 func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]Record, error) {
 	var records []Record
 	baseQuerySql := `SELECT id, domain_id, name, type, value, ttl FROM ` + m.RecordsTable + ` WHERE domain_id=? and name=? and type=?`
-
-	logger.Debugf("Baseurl %v, doamin_id %v, host %v, qtype %v", baseQuerySql, domainID, host, qtype)
 
 	rows, err := m.DB.Query(baseQuerySql, domainID, host, qtype)
 	if err != nil {
