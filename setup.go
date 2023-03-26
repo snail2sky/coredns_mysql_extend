@@ -17,8 +17,8 @@ func setup(c *caddy.Controller) error {
 	mysql := MakeMysqlPlugin()
 	mysql.ParseConfig(c)
 
-	c.OnStartup(mysql.OnStartup)
-	c.OnShutdown(mysql.OnShutdown)
+	// c.OnStartup(mysql.OnStartup)
+	// c.OnShutdown(mysql.OnShutdown)
 
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
