@@ -206,7 +206,7 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, error) {
 		zone = strings.Join(items[i:], ".")
 		log.Infof("zone %#v", zone)
 		id, ok = m.domainMap[zone]
-		host = strings.Join(items[:i+1], ".")
+		host = strings.Join(items[:i], ".")
 		if ok {
 			return id, host, nil
 		}
@@ -312,7 +312,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 func (m *Mysql) getRecords(domainID int, host string, qtype string) ([]Record, error) {
 	var records []Record
-	baseQuerySql := `SELECT id, domain_id, name, type, value, ttl FROM ` + m.RecordsTable + ` WHERE domain_id=? and name="?" and type="?"`
+	baseQuerySql := `SELECT id, domain_id, name, type, value, ttl FROM ` + m.RecordsTable + ` WHERE domain_id=? and name=? and type=?`
 	log.Infof("Baseurl %v, doamin_id %v, host %v, qtype %v", baseQuerySql, domainID, host, qtype)
 	rows, err := m.DB.Query(baseQuerySql, domainID, host, qtype)
 	log.Infof("rows %#v, err %v", rows, err)
