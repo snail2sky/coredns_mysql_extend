@@ -166,6 +166,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	fqdnName := state.Name()
 	log.Infof("%#v", state)
 	log.Info(fqdnName)
+	domainName := fqdnName
 	// if !strings.HasSuffix(domainName, ".") {
 	// 	domainName += "."
 	// }
