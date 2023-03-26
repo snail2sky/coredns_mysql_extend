@@ -123,8 +123,9 @@ func (m *Mysql) OnStartup() error {
 	m.Once.Do(func() {
 		// Initialize database connection pool
 		db, err := sql.Open("mysql", m.dsn)
+		log.Info(m.dsn)
 		if err != nil {
-			log.Debugf("[FATAL] Failed to connect to database: %s", err)
+			log.Fatalf("Failed to connect to database: %s", err)
 		}
 
 		m.DB = db
