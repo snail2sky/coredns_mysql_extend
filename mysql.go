@@ -69,6 +69,16 @@ func (m *Mysql) ParseConfig(c *caddy.Controller) error {
 					return c.ArgErr()
 				}
 				m.dsn = c.Val()
+			case "domains_table":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
+				m.DomainsTable = c.Val()
+			case "records_table":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
+				m.RecordsTable = c.Val()
 			// case "cache":
 			// 	if !c.Args(&m.TTL) {
 			// 		return c.ArgErr()
@@ -123,7 +133,6 @@ func (m *Mysql) OnStartup() error {
 	m.Once.Do(func() {
 		// Initialize database connection pool
 		db, err := sql.Open("mysql", m.dsn)
-		log.Info(m.dsn)
 		if err != nil {
 			log.Fatalf("Failed to connect to database: %s", err)
 		}
