@@ -135,6 +135,7 @@ func (m *Mysql) OnStartup() error {
 		}
 
 		m.DB = db
+		logger.Debugf("mysql %#v", m)
 		// Set default values
 		if m.TTL == 0 {
 			m.TTL = defaultTTL
@@ -415,7 +416,9 @@ func (m *Mysql) OnShutdown() error {
 	for k, v := range m.degradeCache {
 		logger.Debugf("record %#v, answers %#v", k, v)
 	}
-	m.DB.Close()
+	if m.DB != nil {
+		m.DB.Close()
+	}
 	return nil
 }
 
