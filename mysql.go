@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -11,13 +12,14 @@ import (
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/cache"
+
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/request"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/miekg/dns"
 )
 
-var log = clog.NewWithPlugin(pluginName)
+var dnsLogger = clog.NewWithPlugin(pluginName)
 
 type Mysql struct {
 	Next          plugin.Handler
@@ -57,7 +59,7 @@ func (m *Mysql) Name() string {
 
 func (m *Mysql) ParseConfig(c *caddy.Controller) error {
 	for c.Next() {
-		log.Infof("%#v", c)
+		log.Printf("%#v", c)
 		for c.NextBlock() {
 			switch c.Val() {
 			case "dsn":
@@ -130,7 +132,7 @@ func (m *Mysql) OnStartup() error {
 		// Initialize database connection pool
 		db, err := sql.Open("mysql", m.dsn)
 		if err != nil {
-			log.Fatalf("Failed to connect to database: %s", err)
+			dnsLogger.Fatalf("Failed to connect to database: %s", err)
 		}
 
 		m.DB = db
@@ -158,7 +160,7 @@ func (m *Mysql) OnStartup() error {
 func (m *Mysql) rePing() {
 	for {
 		if err := m.DB.Ping(); err != nil {
-			log.Debugf("[ERROR] Failed to ping database: %s", err)
+			dnsLogger.Debugf("[ERROR] Failed to ping database: %s", err)
 			time.Sleep(m.RetryInterval)
 			continue
 		}
@@ -171,19 +173,19 @@ func (m *Mysql) reGetDomain() {
 	for {
 		rows, err := m.DB.Query("SELECT id, name FROM " + m.DomainsTable)
 		if err != nil {
-			log.Error(err)
+			dnsLogger.Error(err)
 		}
 
 		for rows.Next() {
 			var domain Domain
 			err := rows.Scan(&domain.ID, &domain.Name)
 			if err != nil {
-				log.Error(err)
+				dnsLogger.Error(err)
 			}
 			domainMap[domain.Name] = domain.ID
 		}
 		m.domainMap = domainMap
-		log.Infof("domainmap %#v", domainMap)
+		dnsLogger.Infof("domainmap %#v", domainMap)
 		time.Sleep(time.Minute)
 	}
 }
@@ -199,8 +201,8 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, error) {
 
 	for i := range items {
 		zone = strings.Join(items[i:], zoneSeparator)
-		log.Infof("zone %#v", zone)
-		id, ok = m.domainMap[zone]
+		dnsLogger.Infof("zone %#v", zone)
+		id, ok = m.getDomainID(zone)
 		host = strings.Join(items[:i], zoneSeparator)
 		if ok {
 			return id, host, nil
@@ -230,7 +232,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	qName := state.Name()
 	qType := state.Type()
 
-	log.Infof("qname %s, qtype %s", qName, qType)
+	dnsLogger.Infof("qname %s, qtype %s", qName, qType)
 
 	// if !strings.HasSuffix(domainName, ".") {
 	// 	domainName += "."
@@ -252,14 +254,14 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	domainID, host, err := m.getDomainInfo(qName)
 
 	if err != nil {
-		log.Debugf("[ERROR] Failed to get domain %s from database: %s", qName, err)
+		dnsLogger.Debugf("[ERROR] Failed to get domain %s from database: %s", qName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
 	records, err := m.getRecords(domainID, host, qType)
-	log.Infof("records %#v", records)
+	dnsLogger.Infof("records %#v", records)
 	if err != nil {
-		log.Debugf("[ERROR] Failed to get records for domain %s from database: %s", qName, err)
+		dnsLogger.Debugf("[ERROR] Failed to get records for domain %s from database: %s", qName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
@@ -268,7 +270,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	for _, record := range records {
 		rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", record.Name, record.TTL, record.Type, record.Value))
 		if err != nil {
-			log.Debugf("[ERROR] Failed to create DNS record: %s", err)
+			dnsLogger.Debugf("[ERROR] Failed to create DNS record: %s", err)
 			continue
 		}
 		answers = append(answers, rr)
@@ -280,19 +282,19 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		domainID, ok := m.getDomainID(baseZone)
 		wildcardName := wildcard + zoneSeparator + baseZone
 		if !ok {
-			log.Infof("[ERROR] Failed to get domain %s from database: %s", qName, err)
+			dnsLogger.Infof("[ERROR] Failed to get domain %s from database: %s", qName, err)
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 		}
 		records, err := m.getRecords(domainID, wildcard, qType)
 		if err != nil {
-			log.Infof("[ERROR] Failed to get records for domain %s from database: %s", wildcardName, err)
+			dnsLogger.Infof("[ERROR] Failed to get records for domain %s from database: %s", wildcardName, err)
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 		}
 
 		for _, record := range records {
 			rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", wildcardName, record.TTL, record.Type, record.Value))
 			if err != nil {
-				log.Infof("[ERROR] Failed to create DNS record: %s", err)
+				dnsLogger.Infof("[ERROR] Failed to create DNS record: %s", err)
 				continue
 			}
 			answers = append(answers, rr)
@@ -320,9 +322,9 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 func (m *Mysql) getRecords(domainID int, host string, qtype string) ([]Record, error) {
 	var records []Record
 	baseQuerySql := `SELECT id, domain_id, name, type, value, ttl FROM ` + m.RecordsTable + ` WHERE domain_id=? and name=? and type=?`
-	log.Infof("Baseurl %v, doamin_id %v, host %v, qtype %v", baseQuerySql, domainID, host, qtype)
+	dnsLogger.Infof("Baseurl %v, doamin_id %v, host %v, qtype %v", baseQuerySql, domainID, host, qtype)
 	rows, err := m.DB.Query(baseQuerySql, domainID, host, qtype)
-	log.Infof("rows %#v, err %v", rows, err)
+	dnsLogger.Infof("rows %#v, err %v", rows, err)
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +336,7 @@ func (m *Mysql) getRecords(domainID int, host string, qtype string) ([]Record, e
 		if err != nil {
 			return nil, err
 		}
-		log.Infof("record %#v", record)
+		dnsLogger.Infof("record %#v", record)
 		records = append(records, record)
 	}
 	return records, nil
@@ -345,9 +347,9 @@ func (m *Mysql) OnShutdown() error {
 	return nil
 }
 
-func (m *Mysql) Debug() {
-	log.Debugf("[DEBUG] MySQL plugin configuration: %+v", m)
-}
+// func (m *Mysql) Debug() {
+// 	dnsLogger.Debugf("[DEBUG] MySQL plugin configuration: %+v", m)
+// }
 
 // func (m *Mysql) Metrics() []plugin.Metric {
 // 	return nil
