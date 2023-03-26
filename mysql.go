@@ -150,10 +150,12 @@ func (m *Mysql) OnStartup() error {
 	})
 
 	err := m.createTables()
-	logger.Error(err)
+	if err != nil {
+		logger.Error(err)
+	}
 	logger.Debugf("Load degrade data")
 	// TODO
-	m.degradeCache = nil
+	m.degradeCache = make(map[*Record][]dns.RR, 0)
 	return nil
 }
 
