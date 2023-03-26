@@ -25,6 +25,7 @@ type Mysql struct {
 	dsn           string
 	DB            *sql.DB
 	Cache         cache.Cache
+	degradeCache  map[*Record][]dns.RR
 	domainMap     map[string]int
 	TTL           uint32
 	RetryInterval time.Duration
@@ -46,6 +47,7 @@ type Record struct {
 	Name     string
 	Type     string
 	Value    string
+	fqdn     string
 	TTL      uint32
 }
 
@@ -148,9 +150,10 @@ func (m *Mysql) OnStartup() error {
 	})
 
 	err := m.createTables()
-	if err != nil {
-		return err
-	}
+	logger.Error(err)
+	logger.Debugf("Load degrade data")
+	// TODO
+	m.degradeCache = nil
 	return nil
 }
 
@@ -222,13 +225,20 @@ func (m *Mysql) getBaseZone(fqdn string) string {
 	return rootZone
 }
 
+func (m *Mysql) degradeQuery(record *Record) ([]dns.RR, bool) {
+	answers, ok := m.degradeCache[record]
+	return answers, ok
+}
+
 func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	var degradeAnswers []dns.RR
 	state := request.Request{W: w, Req: r}
 
 	// Get domain name
 
 	qName := state.Name()
 	qType := state.Type()
+	degradeRecord := &Record{fqdn: qName, Type: qType}
 
 	logger.Debugf("FQDN %s, DNS query type %s", qName, qType)
 
@@ -244,7 +254,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// 	}
 	// }
 
-	// Query database
+	// Query zone cache
 	zoneID, host, zone, err := m.getDomainInfo(qName)
 	logger.Debugf("ZoneID %d, host %s, zone %s", zoneID, host, zone)
 
@@ -259,7 +269,13 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	logger.Debugf("domainID %d, host %s, qType %s, records %#v", zoneID, host, qType, records)
 	if err != nil {
 		logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
-		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+
+		answers, ok := m.degradeQuery(degradeRecord)
+		if !ok {
+			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+		}
+		degradeAnswers = answers
+		goto DegradeEnterpoint
 	}
 
 	// try query CNAME type of record
@@ -344,13 +360,16 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// 	key := plugin.EncodeCacheKey(domainName, dns.TypeA)
 	// 	m.Cache.Set(key, answers[0], time.Duration(m.TTL)*time.Second)
 	// }
-
+DegradeEnterpoint:
+	answers = append(answers, degradeAnswers...)
 	// Return result
 	if len(answers) > 0 {
 		msg := new(dns.Msg)
 		msg.SetReply(r)
 		msg.Answer = answers
 		w.WriteMsg(msg)
+		m.degradeCache[degradeRecord] = answers
+		logger.Debugf("Add degrade record %#v", degradeRecord)
 		return dns.RcodeSuccess, nil
 	}
 
@@ -383,6 +402,9 @@ func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]Record, er
 }
 
 func (m *Mysql) OnShutdown() error {
+	for k, v := range m.degradeCache {
+		logger.Debugf("record %#v, answers %#v", k, v)
+	}
 	m.DB.Close()
 	return nil
 }
