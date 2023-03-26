@@ -25,7 +25,7 @@ type Mysql struct {
 	dsn           string
 	DB            *sql.DB
 	Cache         cache.Cache
-	degradeCache  map[*Record][]dns.RR
+	degradeCache  map[Record][]dns.RR
 	domainMap     map[string]int
 	TTL           uint32
 	RetryInterval time.Duration
@@ -156,7 +156,7 @@ func (m *Mysql) OnStartup() error {
 	}
 	logger.Debugf("Load degrade data")
 	// TODO
-	m.degradeCache = make(map[*Record][]dns.RR, 0)
+	m.degradeCache = make(map[Record][]dns.RR, 0)
 	return nil
 }
 
@@ -177,7 +177,7 @@ func (m *Mysql) reGetDomain() {
 		rows, err := m.DB.Query("SELECT id, name FROM " + m.DomainsTable)
 		if err != nil {
 			logger.Errorf("Failed to query domains: %s", err)
-			time.Sleep(time.Minute)
+			time.Sleep(m.RetryInterval)
 			continue
 		}
 
@@ -230,7 +230,7 @@ func (m *Mysql) getBaseZone(fqdn string) string {
 	return rootZone
 }
 
-func (m *Mysql) degradeQuery(record *Record) ([]dns.RR, bool) {
+func (m *Mysql) degradeQuery(record Record) ([]dns.RR, bool) {
 	answers, ok := m.degradeCache[record]
 	return answers, ok
 }
@@ -243,7 +243,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 	qName := state.Name()
 	qType := state.Type()
-	degradeRecord := &Record{fqdn: qName, Type: qType}
+	degradeRecord := Record{fqdn: qName, Type: qType}
 
 	logger.Debugf("FQDN %s, DNS query type %s", qName, qType)
 
