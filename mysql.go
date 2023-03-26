@@ -162,12 +162,13 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	state := request.Request{W: w, Req: r}
 
 	// Get domain name
-	domainName := state.Name()
-	log.Info(domainName)
-	if !strings.HasSuffix(domainName, ".") {
-		domainName += "."
-	}
-	log.Info(domainName)
+
+	fqdnName := state.Name()
+	log.Infof("%#v", state)
+	log.Info(fqdnName)
+	// if !strings.HasSuffix(domainName, ".") {
+	// 	domainName += "."
+	// }
 
 	// Check cache first
 	// if m.Cache != nil {
