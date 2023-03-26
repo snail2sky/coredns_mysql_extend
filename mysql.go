@@ -188,7 +188,7 @@ func (m *Mysql) reGetDomain() {
 			domainMap[domain.Name] = domain.ID
 		}
 		m.domainMap = domainMap
-		log.Infof("domainmap %s", domainMap)
+		log.Infof("domainmap %#v", domainMap)
 		time.Sleep(time.Minute)
 	}
 }
@@ -252,7 +252,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	}
 
 	records, err := m.getRecords(domainID, host, qType)
-	log.Infof("records %s", records)
+	log.Infof("records %#v", records)
 	if err != nil {
 		log.Debugf("[ERROR] Failed to get records for domain %s from database: %s", domainName, err)
 		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
@@ -313,9 +313,9 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 func (m *Mysql) getRecords(domainID int, host string, qtype string) ([]Record, error) {
 	var records []Record
 	baseQuerySql := "SELECT id, domain_id, name, type, value, ttl FROM " + m.RecordsTable + " WHERE domain_id=? and name=? and type=?"
-	log.Infof("Baseurl %s, doamin_id %s, host %s, qtype %s", baseQuerySql, domainID, host, qtype)
+	log.Infof("Baseurl %v, doamin_id %v, host %v, qtype %v", baseQuerySql, domainID, host, qtype)
 	rows, err := m.DB.Query(baseQuerySql, domainID, host, qtype)
-	log.Infof("rows %s, err %v", rows, err)
+	log.Infof("rows %#v, err %v", rows, err)
 	if err != nil {
 		return nil, err
 	}
@@ -327,6 +327,7 @@ func (m *Mysql) getRecords(domainID int, host string, qtype string) ([]Record, e
 		if err != nil {
 			return nil, err
 		}
+		log.Infof("record %#v", record)
 		records = append(records, record)
 	}
 	return records, nil
