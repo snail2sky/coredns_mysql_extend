@@ -354,7 +354,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 			}
 
 			rrString = fmt.Sprintf("%s %d IN %s %s", qName, cnameRecord.TTL, cnameRecord.Type, cnameRecord.Value)
-			degradeRecord.rrString = rrString
 			rr, err := dns.NewRR(rrString)
 			if err != nil {
 				logger.Errorf("Failed to create DNS record: %s", err)
@@ -382,7 +381,9 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 	// Process records
 	for _, record := range records {
-		rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", record.Name, record.TTL, record.Type, record.Value))
+		rrString = fmt.Sprintf("%s %d IN %s %s", record.Name, record.TTL, record.Type, record.Value)
+		rr, err := dns.NewRR(rrString)
+		degradeRecord.rrString = rrString
 		if err != nil {
 			logger.Errorf("Failed to create DNS record: %s", err)
 			continue
@@ -406,7 +407,9 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		}
 
 		for _, record := range records {
-			rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", wildcardName, record.TTL, record.Type, record.Value))
+			rrString = fmt.Sprintf("%s %d IN %s %s", wildcardName, record.TTL, record.Type, record.Value)
+			rr, err := dns.NewRR(rrString)
+			degradeRecord.rrString = rrString
 			if err != nil {
 				logger.Errorf("Failed to create DNS record: %s", err)
 				continue
