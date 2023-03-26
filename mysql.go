@@ -10,6 +10,7 @@ import (
 
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/pkg/cache"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/request"
 	_ "github.com/go-sql-driver/mysql"
@@ -26,7 +27,7 @@ var log = clog.NewWithPlugin(pluginName)
 type Mysql struct {
 	Next          plugin.Handler
 	DB            *sql.DB
-	Cache         plugin.Cache
+	Cache         cache.Cache
 	TTL           uint32
 	RetryInterval time.Duration
 	DomainsTable  string
@@ -151,16 +152,16 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	}
 
 	// Check cache first
-	if m.Cache != nil {
-		key := plugin.EncodeCacheKey(domainName, dns.TypeA)
-		if a, ok := m.Cache.Get(key); ok {
-			msg := new(dns.Msg)
-			msg.SetReply(r)
-			msg.Answer = []dns.RR{a.(dns.RR)}
-			w.WriteMsg(msg)
-			return dns.RcodeSuccess, nil
-		}
-	}
+	// if m.Cache != nil {
+	// 	key := plugin.EncodeCacheKey(domainName, dns.TypeA)
+	// 	if a, ok := m.Cache.Get(key); ok {
+	// 		msg := new(dns.Msg)
+	// 		msg.SetReply(r)
+	// 		msg.Answer = []dns.RR{a.(dns.RR)}
+	// 		w.WriteMsg(msg)
+	// 		return dns.RcodeSuccess, nil
+	// 	}
+	// }
 
 	// Query database
 	domain, err := m.getDomain(domainName)
@@ -197,7 +198,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		wildcardName := "*." + strings.Join(strings.Split(domainName, ".")[1:], ".")
 		records, err := m.getRecords(domain.ID)
 		if err != nil {
-			log.Printf("[ERROR] Failed to get records for domain %s from database: %s", wildcardName, err)
+			log.Debugf("[ERROR] Failed to get records for domain %s from database: %s", wildcardName, err)
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 		}
 
@@ -205,7 +206,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 			if record.Type == "A" || record.Type == "AAAA" || record.Type == "CNAME" || record.Type == "SRV" || record.Type == "SOA" || record.Type == "NS" || record.Type == "PTR" {
 				rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", wildcardName, record.TTL, record.Type, record.Value))
 				if err != nil {
-					log.Printf("[ERROR] Failed to create DNS record: %s", err)
+					log.Debugf("[ERROR] Failed to create DNS record: %s", err)
 					continue
 				}
 				answers = append(answers, rr)
@@ -214,10 +215,10 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	}
 
 	// Cache result
-	if m.Cache != nil && len(answers) > 0 {
-		key := plugin.EncodeCacheKey(domainName, dns.TypeA)
-		m.Cache.Set(key, answers[0], time.Duration(m.TTL)*time.Second)
-	}
+	// if m.Cache != nil && len(answers) > 0 {
+	// 	key := plugin.EncodeCacheKey(domainName, dns.TypeA)
+	// 	m.Cache.Set(key, answers[0], time.Duration(m.TTL)*time.Second)
+	// }
 
 	// Return result
 	if len(answers) > 0 {
@@ -265,7 +266,7 @@ func (m *Mysql) getRecords(domainID int) ([]Record, error) {
 func (m *Mysql) retryLoop() {
 	for {
 		if err := m.DB.Ping(); err != nil {
-			log.Printf("[ERROR] Failed to ping database: %s", err)
+			log.Debugf("[ERROR] Failed to ping database: %s", err)
 			time.Sleep(m.RetryInterval)
 			continue
 		}
@@ -279,21 +280,21 @@ func (m *Mysql) OnShutdown() error {
 }
 
 func (m *Mysql) Debug() {
-	log.Printf("[DEBUG] MySQL plugin configuration: %+v", m)
+	log.Debugf("[DEBUG] MySQL plugin configuration: %+v", m)
 }
 
 // func (m *Mysql) Metrics() []plugin.Metric {
 // 	return nil
 // }
 
-func MysqlPlugin(c context.Context, dsn string, domainsTable string, recordsTable string, ttl uint32, retryInterval time.Duration, logEnabled bool) (plugin.Plugin, error) {
-	return &Mysql{
-		DB:            nil,
-		Cache:         nil,
-		TTL:           ttl,
-		RetryInterval: retryInterval,
-		DomainsTable:  domainsTable,
-		RecordsTable:  recordsTable,
-		LogEnabled:    logEnabled,
-	}, nil
-}
+// func MysqlPlugin(c context.Context, dsn string, domainsTable string, recordsTable string, ttl uint32, retryInterval time.Duration, logEnabled bool) (plugin.Plugin, error) {
+// 	return &Mysql{
+// 		DB:            nil,
+// 		Cache:         nil,
+// 		TTL:           ttl,
+// 		RetryInterval: retryInterval,
+// 		DomainsTable:  domainsTable,
+// 		RecordsTable:  recordsTable,
+// 		LogEnabled:    logEnabled,
+// 	}, nil
+// }
