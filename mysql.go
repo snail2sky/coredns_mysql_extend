@@ -131,7 +131,7 @@ func (m *Mysql) OnStartup() error {
 		// Initialize database connection pool
 		db, err := sql.Open("mysql", m.dsn)
 		if err != nil {
-			logger.Fatalf("Failed to connect to database: %s", err)
+			logger.Errorf("Failed to connect to database: %s", err)
 		}
 
 		m.DB = db
@@ -207,7 +207,7 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, string, error) {
 		id, ok = m.getZoneID(zone)
 		host = strings.Join(items[:i], zoneSeparator)
 		if ok {
-			logger.Debugf("Query zone %s in DB", zone)
+			logger.Debugf("Query zone %s in zone cache", zone)
 			return id, host, zone, nil
 		}
 	}
