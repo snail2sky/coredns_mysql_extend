@@ -288,6 +288,8 @@ func (m *Mysql) load() {
 }
 
 func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	answers := make([]dns.RR, 0)
+	var records []Record
 	var degradeAnswers []dns.RR
 	var rrString string
 	state := request.Request{W: w, Req: r}
@@ -317,13 +319,14 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	logger.Debugf("ZoneID %d, host %s, zone %s", zoneID, host, zone)
 
 	if err != nil {
-		logger.Error(err)
-		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+		goto DegradeEnterpoint
+
+		// logger.Error(err)
+		// return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
-	var answers []dns.RR
 	// full match
-	records, err := m.getRecords(zoneID, host, zone, qType)
+	records, err = m.getRecords(zoneID, host, zone, qType)
 	logger.Debugf("domainID %d, host %s, qType %s, records %#v", zoneID, host, qType, records)
 	if err != nil {
 		logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
