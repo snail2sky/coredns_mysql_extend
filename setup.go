@@ -1,4 +1,4 @@
-package mysql
+package coredns_mysql_extend
 
 import (
 	"github.com/coredns/caddy"
