@@ -123,7 +123,7 @@ func (m *Mysql) OnStartup() error {
 		// Initialize database connection pool
 		db, err := sql.Open("mysql", "user:password@tcp(localhost:3306)/dns")
 		if err != nil {
-			log.Fatalf("[FATAL] Failed to connect to database: %s", err)
+			log.Debugf("[FATAL] Failed to connect to database: %s", err)
 		}
 
 		m.DB = db
