@@ -6,7 +6,6 @@ import (
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
-	clog "github.com/coredns/coredns/plugin/pkg/log"
 )
 
 func init() {
@@ -17,7 +16,6 @@ func init() {
 // for parsing any extra options the example plugin may have. The first token this function sees is "example".
 func setup(c *caddy.Controller) error {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
-	clog.D.Set()
 	mysql := MakeMysqlPlugin()
 	mysql.ParseConfig(c)
 

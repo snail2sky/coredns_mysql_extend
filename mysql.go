@@ -319,9 +319,9 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 func (m *Mysql) getRecords(domainID int, host string, qtype string) ([]Record, error) {
 	var records []Record
 	baseQuerySql := `SELECT id, domain_id, name, type, value, ttl FROM ` + m.RecordsTable + ` WHERE domain_id=? and name=? and type=?`
-	logger.Infof("Baseurl %v, doamin_id %v, host %v, qtype %v", baseQuerySql, domainID, host, qtype)
+	logger.Debugf("Baseurl %v, doamin_id %v, host %v, qtype %v", baseQuerySql, domainID, host, qtype)
 	rows, err := m.DB.Query(baseQuerySql, domainID, host, qtype)
-	logger.Infof("rows %#v, err %v", rows, err)
+	logger.Debugf("rows %#v, err %v", rows, err)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +333,7 @@ func (m *Mysql) getRecords(domainID int, host string, qtype string) ([]Record, e
 		if err != nil {
 			return nil, err
 		}
-		logger.Infof("record %#v", record)
+		logger.Debugf("record %#v", record)
 		records = append(records, record)
 	}
 	return records, nil
