@@ -126,7 +126,7 @@ func (m *Mysql) createTables() error {
             id INT NOT NULL AUTO_INCREMENT,
             zone_name VARCHAR(255) NOT NULL,
             PRIMARY KEY (id),
-            UNIQUE KEY (name)
+            UNIQUE KEY (zone_name)
         );
     `)
 	if err != nil {
