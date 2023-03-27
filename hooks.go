@@ -41,6 +41,7 @@ func (m *Mysql) reGetZone() {
 }
 
 func (m *Mysql) onStartup() error {
+	logger.Error("on start up")
 	m.once.Do(func() {
 		// Initialize database connection pool
 		db, err := sql.Open("mysql", m.dsn)
@@ -53,7 +54,7 @@ func (m *Mysql) onStartup() error {
 		db.SetConnMaxLifetime(m.connMaxLifetime)
 		db.SetMaxIdleConns(m.maxIdleConns)
 		db.SetMaxOpenConns(m.maxOpenConns)
-		logger.Error("on start up")
+
 		// Load local file data
 		m.loadLocalData()
 
@@ -76,6 +77,7 @@ func (m *Mysql) onShutdown() error {
 	if m.DB != nil {
 		m.DB.Close()
 	}
+	logger.Error("on shutdown")
 	// Dump memory data to local file
 	m.dump2LocalData()
 	return nil
