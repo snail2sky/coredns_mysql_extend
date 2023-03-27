@@ -95,7 +95,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 			}
 			for _, cname2Record := range cname2Records {
-				rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", cname2Record.Name, cname2Record.TTL, cname2Record.Type, cname2Record.Value))
+				rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", cname2Record.Name+zoneSeparator+cname2Record.ZoneName, cname2Record.TTL, cname2Record.Type, cname2Record.Value))
 				if err != nil {
 					logger.Errorf("Failed to create DNS record: %s", err)
 					continue
@@ -154,8 +154,9 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	if len(answers) > 0 {
 		msg := MakeMessage(r, answers)
 		w.WriteMsg(msg)
-		m.degradeCache[degradeRecord] = DnsRecordInfo{rrStrings: rrStrings, response: answers}
-		logger.Debugf("Add degrade record %#v", degradeRecord)
+		dnsRecordInfo := DnsRecordInfo{rrStrings: rrStrings, response: answers}
+		m.degradeCache[degradeRecord] = dnsRecordInfo
+		logger.Debugf("Add degrade record %#v, dnsRecordInfo %#v", degradeRecord, dnsRecordInfo)
 		return dns.RcodeSuccess, nil
 	}
 DegradeEntrypoint:
