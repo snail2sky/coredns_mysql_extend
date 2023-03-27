@@ -21,8 +21,8 @@ func (m *Mysql) reGetZone() {
 	for {
 		rows, err := m.DB.Query(zoneQuerySQL)
 		if err != nil {
-			logger.Errorf("Failed to query zones: %s", err)
 			time.Sleep(m.failHeartbeatTime)
+			logger.Errorf("Failed to query zones: %s", err)
 			continue
 		}
 

@@ -32,6 +32,9 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, string, error) {
 		zone = strings.Join(items[i:], zoneSeparator)
 		id, ok = m.getZoneID(zone)
 		host = strings.Join(items[:i], zoneSeparator)
+		if host == "" {
+			host = zoneSelf
+		}
 		if ok {
 			logger.Debugf("Query zone %s in zone cache", zone)
 			return id, host, zone, nil

@@ -22,6 +22,7 @@ const (
 	keySeparator  = ":"
 	zoneSeparator = "."
 	wildcard      = "*"
+	zoneSelf      = "@"
 	cnameQtype    = "CNAME"
 	pluginName    = "mysql"
 )
