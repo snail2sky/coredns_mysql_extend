@@ -2,7 +2,6 @@ package coredns_mysql_extend
 
 import (
 	"database/sql"
-	"sync"
 	"time"
 
 	"github.com/coredns/coredns/plugin"
@@ -17,8 +16,6 @@ type Mysql struct {
 
 	Next plugin.Handler
 	DB   *sql.DB
-
-	Once sync.Once
 }
 
 type pureRecord map[string][]string

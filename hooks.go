@@ -41,30 +41,28 @@ func (m *Mysql) reGetZone() {
 }
 
 func (m *Mysql) onStartup() error {
-	m.Once.Do(func() {
-		// Initialize database connection pool
-		db, err := sql.Open("mysql", m.dsn)
-		if err != nil {
-			logger.Errorf("Failed to open database: %s", err)
-		}
+	// Initialize database connection pool
+	db, err := sql.Open("mysql", m.dsn)
+	if err != nil {
+		logger.Errorf("Failed to open database: %s", err)
+	}
 
-		// Config db connection pool
-		db.SetConnMaxIdleTime(m.connMaxIdleTime)
-		db.SetConnMaxLifetime(m.connMaxLifetime)
-		db.SetMaxIdleConns(m.maxIdleConns)
-		db.SetMaxOpenConns(m.maxOpenConns)
+	// Config db connection pool
+	db.SetConnMaxIdleTime(m.connMaxIdleTime)
+	db.SetConnMaxLifetime(m.connMaxLifetime)
+	db.SetMaxIdleConns(m.maxIdleConns)
+	db.SetMaxOpenConns(m.maxOpenConns)
 
-		// Load local file data
-		m.loadLocalData()
+	// Load local file data
+	m.loadLocalData()
 
-		m.DB = db
+	m.DB = db
 
-		// Start retry loop
-		go m.rePing()
-		go m.reGetZone()
-	})
+	// Start retry loop
+	go m.rePing()
+	go m.reGetZone()
 
-	err := m.createTables()
+	err = m.createTables()
 	if err != nil {
 		logger.Error(err)
 	}

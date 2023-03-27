@@ -130,6 +130,7 @@ func (m *Mysql) createTables() error {
         );
     `)
 	if err != nil {
+		logger.Error(err)
 		return err
 	}
 
@@ -147,6 +148,7 @@ func (m *Mysql) createTables() error {
         );
     `)
 	if err != nil {
+		logger.Error(err)
 		return err
 	}
 
