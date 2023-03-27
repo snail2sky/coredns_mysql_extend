@@ -8,6 +8,6 @@ const (
 	rootZone      = "."
 	wildcard      = "*"
 	cnameQtype    = "CNAME"
-	safeMode      = 0600
+	safeMode      = 0640
 	keySeparator  = ":"
 )
