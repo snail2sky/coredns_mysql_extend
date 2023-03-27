@@ -1,6 +1,7 @@
 package coredns_mysql_extend
 
 import (
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -64,14 +65,14 @@ func (m *Mysql) degradeQuery(record record) ([]dns.RR, bool) {
 func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, error) {
 	var records []record
 
-	rows, err := m.DB.Query(recordQuerySQL, domainID, host, qtype)
-	if err != nil {
-		return nil, err
-	}
+	rows := m.DB.QueryRow(recordQuerySQL, domainID, host, qtype)
 
-	for rows.Next() {
+	for {
 		var record record
 		err := rows.Scan(&record.id, &record.zoneID, &record.name, &record.qType, &record.data, &record.ttl)
+		if err == sql.ErrNoRows {
+			return records, nil
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -79,5 +80,5 @@ func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, er
 		logger.Debugf("record %#v", record)
 		records = append(records, record)
 	}
-	return records, nil
+
 }
