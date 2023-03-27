@@ -9,8 +9,8 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (m *Mysql) dump() {
-	pureRecord := make([]map[string][]string, 0)
+func (m *Mysql) dump2LocalData() {
+	pureRecord := make([]pureRecord, 0)
 	for record, dnsRecordInfo := range m.degradeCache {
 		logger.Debugf("Record %#v", record)
 		pureRecord = append(pureRecord, map[string][]string{
@@ -22,15 +22,15 @@ func (m *Mysql) dump() {
 	if err != nil {
 		return
 	}
-	if err := os.WriteFile(m.DumpFile, content, safeMode); err != nil {
+	if err := os.WriteFile(m.dumpFile, content, safeMode); err != nil {
 		logger.Error(err)
 	}
 }
 
-func (m *Mysql) load() {
-	m.degradeCache = make(map[Record]DnsRecordInfo, 0)
-	pureRecords := make([]map[string][]string, 0)
-	content, err := os.ReadFile(m.DumpFile)
+func (m *Mysql) loadLocalData() {
+	m.degradeCache = make(map[record]dnsRecordInfo, 0)
+	pureRecords := make([]pureRecord, 0)
+	content, err := os.ReadFile(m.dumpFile)
 	if err != nil {
 		return
 	}
@@ -43,7 +43,7 @@ func (m *Mysql) load() {
 			var response []dns.RR
 			queryKeySlice := strings.Split(queryKey, keySeparator)
 			fqdn, qType := queryKeySlice[0], queryKeySlice[1]
-			record := Record{fqdn: fqdn, Type: qType}
+			record := record{fqdn: fqdn, Type: qType}
 			for _, rrString := range rrStrings {
 				rr, err := dns.NewRR(rrString)
 				if err != nil {
@@ -51,7 +51,7 @@ func (m *Mysql) load() {
 				}
 				response = append(response, rr)
 			}
-			m.degradeCache[record] = DnsRecordInfo{rrStrings: rrStrings, response: response}
+			m.degradeCache[record] = dnsRecordInfo{rrStrings: rrStrings, response: response}
 		}
 	}
 }

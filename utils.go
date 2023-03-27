@@ -38,11 +38,11 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, string, error) {
 		}
 	}
 
-	return id, host, zone, fmt.Errorf("Domain not exist")
+	return id, host, zone, fmt.Errorf("domain %s not exist", fqdn)
 }
 
 func (m *Mysql) getZoneID(zone string) (int, bool) {
-	id, ok := m.domainMap[zone]
+	id, ok := m.zoneMap[zone]
 	return id, ok
 }
 
@@ -53,14 +53,14 @@ func (m *Mysql) getBaseZone(fqdn string) string {
 	return rootZone
 }
 
-func (m *Mysql) degradeQuery(record Record) ([]dns.RR, bool) {
+func (m *Mysql) degradeQuery(record record) ([]dns.RR, bool) {
 	dnsRecordInfo, ok := m.degradeCache[record]
 	return dnsRecordInfo.response, ok
 }
 
-func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]Record, error) {
-	var records []Record
-	baseQuerySql := `SELECT id, domain_id, name, type, value, ttl FROM ` + m.RecordsTable + ` WHERE domain_id=? and name=? and type=?`
+func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, error) {
+	var records []record
+	baseQuerySql := `SELECT id, domain_id, name, type, value, ttl FROM ` + m.recordsTable + ` WHERE domain_id=? and name=? and type=?`
 
 	rows, err := m.DB.Query(baseQuerySql, domainID, host, qtype)
 	if err != nil {
@@ -69,7 +69,7 @@ func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]Record, er
 	defer rows.Close()
 
 	for rows.Next() {
-		var record Record
+		var record record
 		err := rows.Scan(&record.ID, &record.ZoneID, &record.Name, &record.Type, &record.Value, &record.TTL)
 		if err != nil {
 			return nil, err

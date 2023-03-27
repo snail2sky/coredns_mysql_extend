@@ -9,38 +9,38 @@ func (m *Mysql) rePing() {
 	for {
 		if err := m.DB.Ping(); err != nil {
 			logger.Errorf("Failed to ping database: %s", err)
-			time.Sleep(m.RetryInterval)
+			time.Sleep(m.failHeartbeatTime)
 			continue
 		}
-		time.Sleep(time.Minute)
+		time.Sleep(m.successHeartbeatTime)
 	}
 }
 
-func (m *Mysql) reGetDomain() {
-	var domainMap = make(map[string]int, 0)
+func (m *Mysql) reGetZone() {
+	var zoneMap = make(map[string]int, 0)
 	for {
-		rows, err := m.DB.Query("SELECT id, name FROM " + m.DomainsTable)
+		rows, err := m.DB.Query("SELECT id, zone_name FROM " + m.zonesTable)
 		if err != nil {
-			logger.Errorf("Failed to query domains: %s", err)
-			time.Sleep(m.RetryInterval)
+			logger.Errorf("Failed to query zones: %s", err)
+			time.Sleep(m.failHeartbeatTime)
 			continue
 		}
 
 		for rows.Next() {
-			var domain Domain
-			err := rows.Scan(&domain.ID, &domain.Name)
+			var zoneRecord zoneRecord
+			err := rows.Scan(&zoneRecord.id, &zoneRecord.name)
 			if err != nil {
 				logger.Error(err)
 			}
-			domainMap[domain.Name] = domain.ID
+			zoneMap[zoneRecord.name] = zoneRecord.id
 		}
-		m.domainMap = domainMap
-		logger.Debugf("domainmap %#v", domainMap)
-		time.Sleep(time.Minute)
+		m.zoneMap = zoneMap
+		logger.Debugf("Zone map %#v", zoneMap)
+		time.Sleep(m.successHeartbeatTime)
 	}
 }
 
-func (m *Mysql) OnStartup() error {
+func (m *Mysql) onStartup() error {
 	m.Once.Do(func() {
 		// Initialize database connection pool
 		db, err := sql.Open("mysql", m.dsn)
@@ -48,20 +48,20 @@ func (m *Mysql) OnStartup() error {
 			logger.Errorf("Failed to open database: %s", err)
 		}
 
-		m.DB = db
-		logger.Debugf("mysql %#v", m)
-		// Set default values
-		if m.TTL == 0 {
-			m.TTL = defaultTTL
-		}
+		// Config db connection pool
+		db.SetConnMaxIdleTime(m.connMaxIdleTime)
+		db.SetConnMaxLifetime(m.connMaxLifetime)
+		db.SetMaxIdleConns(m.maxIdleConns)
+		db.SetMaxOpenConns(m.maxOpenConns)
 
-		if m.RetryInterval == 0 {
-			m.RetryInterval = time.Second * 5
-		}
-		m.load()
+		// Load local file data
+		m.loadLocalData()
+
+		m.DB = db
+
 		// Start retry loop
 		go m.rePing()
-		go m.reGetDomain()
+		go m.reGetZone()
 	})
 
 	err := m.createTables()
@@ -73,13 +73,11 @@ func (m *Mysql) OnStartup() error {
 	return nil
 }
 
-func (m *Mysql) OnShutdown() error {
-	for k, v := range m.degradeCache {
-		logger.Debugf("record %#v, answers %#v", k, v)
-	}
+func (m *Mysql) onShutdown() error {
 	if m.DB != nil {
 		m.DB.Close()
 	}
-	m.dump()
+	// Dump memory data to local file
+	m.dump2LocalData()
 	return nil
 }

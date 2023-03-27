@@ -16,58 +16,43 @@ import (
 var logger = clog.NewWithPlugin(pluginName)
 
 func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	answers := make([]dns.RR, 0)
-	var records []Record
-	var rrStrings = make([]string, 0)
+	var records []record
 	state := request.Request{W: w, Req: r}
+	answers := make([]dns.RR, 0)
+	rrStrings := make([]string, 0)
 
 	// Get domain name
-
 	qName := state.Name()
 	qType := state.Type()
-	degradeRecord := Record{fqdn: qName, Type: qType}
+	degradeRecord := record{fqdn: qName, Type: qType}
 
 	logger.Debugf("FQDN %s, DNS query type %s", qName, qType)
-
-	// Check cache first
-	// if m.Cache != nil {
-	// 	key := plugin.EncodeCacheKey(domainName, dns.TypeA)
-	// 	if a, ok := m.Cache.Get(key); ok {
-	// 		msg := new(dns.Msg)
-	// 		msg.SetReply(r)
-	// 		msg.Answer = []dns.RR{a.(dns.RR)}
-	// 		w.WriteMsg(msg)
-	// 		return dns.RcodeSuccess, nil
-	// 	}
-	// }
 
 	// Query zone cache
 	zoneID, host, zone, err := m.getDomainInfo(qName)
 	logger.Debugf("ZoneID %d, host %s, zone %s", zoneID, host, zone)
 
+	// Zone not exist, maybe db error cause no zone, goto degrade entrypoint
 	if err != nil {
+		logger.Error(err)
 		goto DegradeEntrypoint
-
-		// logger.Error(err)
-		// return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 	}
 
 	// Query DB, full match
 	records, err = m.getRecords(zoneID, host, zone, qType)
-	logger.Debugf("domainID %d, host %s, qType %s, records %#v", zoneID, host, qType, records)
+	logger.Debugf("zone id %d, host %s, zone %s, type %s, records %#v", zoneID, host, zone, qType, records)
 	if err != nil {
 		logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
-		logger.Debugf("Degrade records %#v", m.degradeCache)
 		goto DegradeEntrypoint
 	}
 
-	// try query CNAME type of record
+	// Try query CNAME type of record
 	if len(records) == zero {
 		cnameRecords, err := m.getRecords(zoneID, host, zone, cnameQtype)
-		logger.Debugf("domainID %d, host %s, qType %s, records %#v", zoneID, host, cnameQtype, records)
+		logger.Debugf("zone id %d, host %s, zone %s, type %s, records %#v", zoneID, host, zone, cnameQtype, records)
 		if err != nil {
 			logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
-			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+			goto DegradeEntrypoint
 		}
 		for _, cnameRecord := range cnameRecords {
 			cnameZoneID, cnameHost, cnameZone, err := m.getDomainInfo(cnameRecord.Value)
@@ -75,7 +60,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 			if err != nil {
 				logger.Error(err)
-				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+				goto DegradeEntrypoint
 			}
 
 			rrString := fmt.Sprintf("%s %d IN %s %s", qName, cnameRecord.TTL, cnameRecord.Type, cnameRecord.Value)
@@ -88,12 +73,13 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 			answers = append(answers, rr)
 
 			cname2Records, err := m.getRecords(cnameZoneID, cnameHost, cnameZone, qType)
-			logger.Debugf("domainID %d, host %s, qType %s, records %#v", cnameZoneID, cnameHost, qType, records)
+			logger.Debugf("zone id %d, host %s, zone %s, qType %s, records %#v", cnameZoneID, cnameHost, cnameZone, qType, records)
 
 			if err != nil {
 				logger.Errorf("Failed to get domain %s from database: %s", cnameHost+zoneSeparator+cnameZone, err)
-				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+				goto DegradeEntrypoint
 			}
+
 			for _, cname2Record := range cname2Records {
 				rrString := fmt.Sprintf("%s %d IN %s %s", cname2Record.Name+zoneSeparator+cname2Record.ZoneName, cname2Record.TTL, cname2Record.Type, cname2Record.Value)
 				rrStrings = append(rrStrings, rrString)
@@ -125,13 +111,13 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		domainID, ok := m.getZoneID(baseZone)
 		wildcardName := wildcard + zoneSeparator + baseZone
 		if !ok {
-			logger.Errorf("Failed to get domain %s from database: %s", qName, err)
-			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+			logger.Errorf("Failed to get zone %s from database: %s", qName, err)
+			goto DegradeEntrypoint
 		}
 		records, err := m.getRecords(domainID, wildcard, zone, qType)
 		if err != nil {
 			logger.Errorf("Failed to get records for domain %s from database: %s", wildcardName, err)
-			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+			goto DegradeEntrypoint
 		}
 
 		for _, record := range records {
@@ -146,30 +132,28 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		}
 	}
 
-	// Cache result
-	// if m.Cache != nil && len(answers) > 0 {
-	// 	key := plugin.EncodeCacheKey(domainName, dns.TypeA)
-	// 	m.Cache.Set(key, answers[0], time.Duration(m.TTL)*time.Second)
-	// }
-
 	// Return result
 	if len(answers) > 0 {
 		msg := MakeMessage(r, answers)
 		w.WriteMsg(msg)
-		dnsRecordInfo := DnsRecordInfo{rrStrings: rrStrings, response: answers}
+		// DegradeEntrypoint cache
+		dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: answers}
 		m.degradeCache[degradeRecord] = dnsRecordInfo
 		logger.Debugf("Add degrade record %#v, dnsRecordInfo %#v", degradeRecord, dnsRecordInfo)
+
 		return dns.RcodeSuccess, nil
 	}
+
+	// DegradeEntrypoint
 DegradeEntrypoint:
 	if answers, ok := m.degradeQuery(degradeRecord); ok {
 		msg := MakeMessage(r, answers)
 		w.WriteMsg(msg)
 		logger.Debugf("Add degrade record %#v", degradeRecord)
-		w.WriteMsg(msg)
+
 		return dns.RcodeSuccess, nil
 	}
-
+	logger.Debug("Call next plugin")
 	return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 }
 

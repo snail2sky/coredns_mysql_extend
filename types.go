@@ -6,38 +6,50 @@ import (
 	"time"
 
 	"github.com/coredns/coredns/plugin"
-	"github.com/coredns/coredns/plugin/cache"
 	"github.com/miekg/dns"
 )
 
 type Mysql struct {
-	Next          plugin.Handler
-	dsn           string
-	DB            *sql.DB
-	DumpFile      string
-	Cache         cache.Cache
-	degradeCache  map[Record]DnsRecordInfo
-	domainMap     map[string]int
-	TTL           uint32
-	RetryInterval time.Duration
-	DomainsTable  string
-	RecordsTable  string
-	LogEnabled    bool
-	Once          sync.Once
+	mysqlConfig
+
+	degradeCache map[record]dnsRecordInfo
+	zoneMap      map[string]int
+
+	Next plugin.Handler
+	DB   *sql.DB
+
+	Once sync.Once
 }
 
-type DnsRecordInfo struct {
+type pureRecord map[string][]string
+
+type mysqlConfig struct {
+	dsn          string
+	dumpFile     string
+	ttl          uint32
+	zonesTable   string
+	recordsTable string
+
+	maxIdleConns    int
+	maxOpenConns    int
+	connMaxIdleTime time.Duration
+	connMaxLifetime time.Duration
+
+	failHeartbeatTime    time.Duration
+	successHeartbeatTime time.Duration
+}
+
+type dnsRecordInfo struct {
 	response  []dns.RR
 	rrStrings []string
 }
 
-type Domain struct {
-	ID   int
-	Name string
+type zoneRecord struct {
+	id   int
+	name string
 }
 
-type PureRecord []map[string]string
-type Record struct {
+type record struct {
 	ID       int
 	ZoneID   int
 	ZoneName string

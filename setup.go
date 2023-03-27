@@ -13,11 +13,17 @@ func init() {
 // setup is the function that gets called when the config parser see the token "example". Setup is responsible
 // for parsing any extra options the example plugin may have. The first token this function sees is "example".
 func setup(c *caddy.Controller) error {
+	// Get new mysql plugin
 	mysql := MakeMysqlPlugin()
-	mysql.ParseConfig(c)
 
-	c.OnStartup(mysql.OnStartup)
-	c.OnShutdown(mysql.OnShutdown)
+	// Parse configuration
+	mysql.parseConfig(c)
+
+	// Exec options when start up
+	c.OnStartup(mysql.onStartup)
+
+	// Exec options when shut down
+	c.OnShutdown(mysql.onShutdown)
 
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
