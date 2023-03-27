@@ -3,6 +3,7 @@ package coredns_mysql_extend
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/coredns/coredns/plugin"
@@ -138,10 +139,12 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		w.WriteMsg(msg)
 		// DegradeEntrypoint cache
 		dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: answers}
-		m.degradeCache[degradeRecord] = dnsRecordInfo
-		logger.Debugf("Add degrade record %#v, dnsRecordInfo %#v", degradeRecord, dnsRecordInfo)
+		if cacheDnsRecordInfo, ok := m.degradeCache[degradeRecord]; !ok || !reflect.DeepEqual(cacheDnsRecordInfo, dnsRecordInfo) {
+			m.degradeCache[degradeRecord] = dnsRecordInfo
+			logger.Debugf("Add degrade record %#v, dnsRecordInfo %#v", degradeRecord, dnsRecordInfo)
+			return dns.RcodeSuccess, nil
+		}
 
-		return dns.RcodeSuccess, nil
 	}
 
 	// DegradeEntrypoint
