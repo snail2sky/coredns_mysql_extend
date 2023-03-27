@@ -95,7 +95,9 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 			}
 			for _, cname2Record := range cname2Records {
-				rr, err := dns.NewRR(fmt.Sprintf("%s %d IN %s %s", cname2Record.Name+zoneSeparator+cname2Record.ZoneName, cname2Record.TTL, cname2Record.Type, cname2Record.Value))
+				rrString := fmt.Sprintf("%s %d IN %s %s", cname2Record.Name+zoneSeparator+cname2Record.ZoneName, cname2Record.TTL, cname2Record.Type, cname2Record.Value)
+				rrStrings = append(rrStrings, rrString)
+				rr, err := dns.NewRR(rrString)
 				if err != nil {
 					logger.Errorf("Failed to create DNS record: %s", err)
 					continue
