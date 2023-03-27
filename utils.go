@@ -60,7 +60,6 @@ func (m *Mysql) degradeQuery(record record) ([]dns.RR, bool) {
 
 func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, error) {
 	var records []record
-	var online int
 
 	rows, err := m.DB.Query(recordQuerySQL, domainID, host, qtype)
 	if err != nil {
@@ -70,12 +69,9 @@ func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, er
 
 	for rows.Next() {
 		var record record
-		err := rows.Scan(&record.id, &record.zoneID, &record.name, &record.qType, &record.data, &record.ttl, &online)
+		err := rows.Scan(&record.id, &record.zoneID, &record.name, &record.qType, &record.data, &record.ttl)
 		if err != nil {
 			return nil, err
-		}
-		if online == zero {
-			continue
 		}
 		record.zoneName = zone
 		logger.Debugf("record %#v", record)

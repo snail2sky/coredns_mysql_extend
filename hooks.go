@@ -35,7 +35,7 @@ func (m *Mysql) reGetZone() {
 			zoneMap[zoneRecord.name] = zoneRecord.id
 		}
 		m.zoneMap = zoneMap
-		logger.Debugf("Zone map %#v", zoneMap)
+		logger.Debugf("Zone %#v", zoneMap)
 		time.Sleep(m.successHeartbeatTime)
 	}
 }

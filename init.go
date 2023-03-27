@@ -138,11 +138,11 @@ func (m *Mysql) createTables() error {
         CREATE TABLE IF NOT EXISTS ` + m.recordsTable + ` (
             id INT NOT NULL AUTO_INCREMENT,
             zone_id INT NOT NULL,
-            hostname VARCHAR(255) NOT NULL,
+            hostname VARCHAR(512) NOT NULL,
             type VARCHAR(10) NOT NULL,
-            data VARCHAR(255) NOT NULL,
-            ttl INT NOT NULL,
-			online INT NOT NULL,
+            data VARCHAR(1024) NOT NULL,
+            ttl INT NOT NULL DEFAULT 120,
+			online INT NOT NULL DEFAULT 0,
             PRIMARY KEY (id),
             FOREIGN KEY (zone_id) REFERENCES ` + m.zonesTable + `(id)
         );
