@@ -3,7 +3,7 @@ package coredns_mysql_extend
 import "time"
 
 const (
-	defaultDSN                  = "root:@tcp(127.0.0.1:3306)/dns"
+	defaultDSN                  = "root:qwer1234@tcp(127.0.0.1:3306)/dns"
 	defaultDumpFile             = "dump.json"
 	defaultTTL                  = 120
 	defaultZonesTable           = "zones"

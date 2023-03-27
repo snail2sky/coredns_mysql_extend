@@ -19,7 +19,7 @@ func (m *Mysql) rePing() {
 func (m *Mysql) reGetZone() {
 	var zoneMap = make(map[string]int, 0)
 	for {
-		rows, err := m.DB.Query("SELECT id, zone_name FROM " + m.zonesTable)
+		rows, err := m.DB.Query(zoneQuerySQL)
 		if err != nil {
 			logger.Errorf("Failed to query zones: %s", err)
 			time.Sleep(m.failHeartbeatTime)

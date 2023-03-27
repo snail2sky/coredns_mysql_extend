@@ -24,7 +24,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// Get domain name
 	qName := state.Name()
 	qType := state.Type()
-	degradeRecord := record{fqdn: qName, Type: qType}
+	degradeRecord := record{fqdn: qName, qType: qType}
 
 	logger.Debugf("FQDN %s, DNS query type %s", qName, qType)
 
@@ -55,7 +55,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 			goto DegradeEntrypoint
 		}
 		for _, cnameRecord := range cnameRecords {
-			cnameZoneID, cnameHost, cnameZone, err := m.getDomainInfo(cnameRecord.Value)
+			cnameZoneID, cnameHost, cnameZone, err := m.getDomainInfo(cnameRecord.data)
 			logger.Debugf("ZoneID %d, host %s, zone %s", cnameZoneID, cnameHost, cnameZone)
 
 			if err != nil {
@@ -63,7 +63,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 				goto DegradeEntrypoint
 			}
 
-			rrString := fmt.Sprintf("%s %d IN %s %s", qName, cnameRecord.TTL, cnameRecord.Type, cnameRecord.Value)
+			rrString := fmt.Sprintf("%s %d IN %s %s", qName, cnameRecord.ttl, cnameRecord.qType, cnameRecord.data)
 			rrStrings = append(rrStrings, rrString)
 			rr, err := dns.NewRR(rrString)
 			if err != nil {
@@ -81,7 +81,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 			}
 
 			for _, cname2Record := range cname2Records {
-				rrString := fmt.Sprintf("%s %d IN %s %s", cname2Record.Name+zoneSeparator+cname2Record.ZoneName, cname2Record.TTL, cname2Record.Type, cname2Record.Value)
+				rrString := fmt.Sprintf("%s %d IN %s %s", cname2Record.name+zoneSeparator+cname2Record.zoneName, cname2Record.ttl, cname2Record.qType, cname2Record.data)
 				rrStrings = append(rrStrings, rrString)
 				rr, err := dns.NewRR(rrString)
 				if err != nil {
@@ -95,7 +95,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 	// Process records
 	for _, record := range records {
-		rrString := fmt.Sprintf("%s %d IN %s %s", record.Name, record.TTL, record.Type, record.Value)
+		rrString := fmt.Sprintf("%s %d IN %s %s", record.name, record.ttl, record.qType, record.data)
 		rr, err := dns.NewRR(rrString)
 		rrStrings = append(rrStrings, rrString)
 		if err != nil {
@@ -121,7 +121,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		}
 
 		for _, record := range records {
-			rrString := fmt.Sprintf("%s %d IN %s %s", wildcardName, record.TTL, record.Type, record.Value)
+			rrString := fmt.Sprintf("%s %d IN %s %s", wildcardName, record.ttl, record.qType, record.data)
 			rr, err := dns.NewRR(rrString)
 			rrStrings = append(rrStrings, rrString)
 			if err != nil {

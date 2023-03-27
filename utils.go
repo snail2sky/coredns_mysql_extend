@@ -61,9 +61,8 @@ func (m *Mysql) degradeQuery(record record) ([]dns.RR, bool) {
 func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, error) {
 	var records []record
 	var online int
-	baseQuerySql := `SELECT id, zone_id, hostname, type, data, ttl, online FROM ` + m.recordsTable + ` WHERE domain_id=? and name=? and type=?`
 
-	rows, err := m.DB.Query(baseQuerySql, domainID, host, qtype)
+	rows, err := m.DB.Query(recordQuerySQL, domainID, host, qtype)
 	if err != nil {
 		return nil, err
 	}

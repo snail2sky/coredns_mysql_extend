@@ -19,6 +19,10 @@ func setup(c *caddy.Controller) error {
 	// Parse configuration
 	mysql.parseConfig(c)
 
+	// Init global var
+	zoneQuerySQL = `SELECT id, zone_name FROM ` + mysql.zonesTable
+	recordQuerySQL = `SELECT id, zone_id, hostname, type, data, ttl, online FROM ` + mysql.recordsTable + ` WHERE domain_id=? and name=? and type=?`
+
 	// Exec options when start up
 	c.OnStartup(mysql.onStartup)
 

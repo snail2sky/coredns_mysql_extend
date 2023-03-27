@@ -7,6 +7,11 @@ import (
 	"github.com/coredns/caddy"
 )
 
+var (
+	zoneQuerySQL   string
+	recordQuerySQL string
+)
+
 func (m *Mysql) Name() string {
 	return pluginName
 }
@@ -26,6 +31,7 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 		failHeartbeatTime:    defaultFailHeartBeatTime,
 		successHeartbeatTime: defaultSuccessHeartBeatTime,
 	}
+
 	m.mysqlConfig = mysqlConfig
 	for c.Next() {
 		for c.NextBlock() {

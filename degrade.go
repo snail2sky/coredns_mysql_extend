@@ -14,7 +14,7 @@ func (m *Mysql) dump2LocalData() {
 	for record, dnsRecordInfo := range m.degradeCache {
 		logger.Debugf("Record %#v", record)
 		pureRecord = append(pureRecord, map[string][]string{
-			fmt.Sprintf("%s%s%s", record.fqdn, keySeparator, record.Type): dnsRecordInfo.rrStrings,
+			fmt.Sprintf("%s%s%s", record.fqdn, keySeparator, record.qType): dnsRecordInfo.rrStrings,
 		})
 	}
 
@@ -43,7 +43,7 @@ func (m *Mysql) loadLocalData() {
 			var response []dns.RR
 			queryKeySlice := strings.Split(queryKey, keySeparator)
 			fqdn, qType := queryKeySlice[0], queryKeySlice[1]
-			record := record{fqdn: fqdn, Type: qType}
+			record := record{fqdn: fqdn, qType: qType}
 			for _, rrString := range rrStrings {
 				rr, err := dns.NewRR(rrString)
 				if err != nil {
