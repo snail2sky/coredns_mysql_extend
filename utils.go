@@ -60,7 +60,8 @@ func (m *Mysql) degradeQuery(record record) ([]dns.RR, bool) {
 
 func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, error) {
 	var records []record
-	baseQuerySql := `SELECT id, domain_id, name, type, value, ttl FROM ` + m.recordsTable + ` WHERE domain_id=? and name=? and type=?`
+	var online int
+	baseQuerySql := `SELECT id, zone_id, hostname, type, data, ttl, online FROM ` + m.recordsTable + ` WHERE domain_id=? and name=? and type=?`
 
 	rows, err := m.DB.Query(baseQuerySql, domainID, host, qtype)
 	if err != nil {
@@ -70,11 +71,14 @@ func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, er
 
 	for rows.Next() {
 		var record record
-		err := rows.Scan(&record.ID, &record.ZoneID, &record.Name, &record.Type, &record.Value, &record.TTL)
+		err := rows.Scan(&record.id, &record.zoneID, &record.name, &record.qType, &record.data, &record.ttl, &online)
 		if err != nil {
 			return nil, err
 		}
-		record.ZoneName = zone
+		if online == zero {
+			continue
+		}
+		record.zoneName = zone
 		logger.Debugf("record %#v", record)
 		records = append(records, record)
 	}

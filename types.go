@@ -50,12 +50,12 @@ type zoneRecord struct {
 }
 
 type record struct {
-	ID       int
-	ZoneID   int
-	ZoneName string
-	Name     string
-	Type     string
-	Value    string
+	id       int
+	zoneID   int
+	zoneName string
+	name     string
+	qType    string
+	data     string
 	fqdn     string
-	TTL      uint32
+	ttl      uint32
 }
