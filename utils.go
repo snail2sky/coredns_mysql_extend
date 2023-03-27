@@ -68,7 +68,6 @@ func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	for rows.Next() {
 		var record record
