@@ -52,7 +52,7 @@ func (m *Mysql) onStartup() error {
 	db.SetConnMaxLifetime(m.connMaxLifetime)
 	db.SetMaxIdleConns(m.maxIdleConns)
 	db.SetMaxOpenConns(m.maxOpenConns)
-
+	logger.Error("on start up")
 	// Load local file data
 	m.loadLocalData()
 
