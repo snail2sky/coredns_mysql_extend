@@ -41,33 +41,34 @@ func (m *Mysql) reGetZone() {
 }
 
 func (m *Mysql) onStartup() error {
-	// Initialize database connection pool
-	db, err := sql.Open("mysql", m.dsn)
-	if err != nil {
-		logger.Errorf("Failed to open database: %s", err)
-	}
+	m.once.Do(func() {
+		// Initialize database connection pool
+		db, err := sql.Open("mysql", m.dsn)
+		if err != nil {
+			logger.Errorf("Failed to open database: %s", err)
+		}
 
-	// Config db connection pool
-	db.SetConnMaxIdleTime(m.connMaxIdleTime)
-	db.SetConnMaxLifetime(m.connMaxLifetime)
-	db.SetMaxIdleConns(m.maxIdleConns)
-	db.SetMaxOpenConns(m.maxOpenConns)
-	logger.Error("on start up")
-	// Load local file data
-	m.loadLocalData()
+		// Config db connection pool
+		db.SetConnMaxIdleTime(m.connMaxIdleTime)
+		db.SetConnMaxLifetime(m.connMaxLifetime)
+		db.SetMaxIdleConns(m.maxIdleConns)
+		db.SetMaxOpenConns(m.maxOpenConns)
+		logger.Error("on start up")
+		// Load local file data
+		m.loadLocalData()
 
-	m.DB = db
+		m.DB = db
 
-	// Start retry loop
-	go m.rePing()
-	go m.reGetZone()
+		// Start retry loop
+		go m.rePing()
+		go m.reGetZone()
 
-	err = m.createTables()
-	if err != nil {
-		logger.Error(err)
-	}
-	logger.Debugf("Load degrade data")
-	// TODO
+		err = m.createTables()
+		if err != nil {
+			logger.Error(err)
+		}
+		logger.Debugf("Load degrade data")
+	})
 	return nil
 }
 
