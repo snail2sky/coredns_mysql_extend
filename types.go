@@ -18,7 +18,7 @@ type Mysql struct {
 	Next plugin.Handler
 	DB   *sql.DB
 
-	once *sync.Once
+	once sync.Once
 }
 
 type pureRecord map[string][]string
