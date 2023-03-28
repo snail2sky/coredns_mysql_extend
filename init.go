@@ -1,6 +1,7 @@
 package coredns_mysql_extend
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -21,7 +22,7 @@ func (m *Mysql) Name() string {
 // }
 
 func (m *Mysql) parseConfig(c *caddy.Controller) error {
-	mysqlConfig := mysqlConfig{
+	mysqlConfig := &mysqlConfig{
 		dsn:          defaultDSN,
 		dumpFile:     defaultDumpFile,
 		ttl:          defaultTTL,
@@ -128,6 +129,10 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 			}
 		}
 	}
+	mysqlConfig.queryZoneSQL = fmt.Sprintf(mysqlConfig.queryZoneSQL, mysqlConfig.zonesTable)
+	mysqlConfig.queryRecordSQL = fmt.Sprintf(mysqlConfig.queryRecordSQL, mysqlConfig.recordsTable)
+	logger.Debugf("Query zone SQL: %s", mysqlConfig.queryZoneSQL)
+	logger.Debugf("Query record SQL: %s", mysqlConfig.queryRecordSQL)
 	return nil
 }
 

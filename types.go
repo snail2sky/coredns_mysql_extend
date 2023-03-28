@@ -9,7 +9,7 @@ import (
 )
 
 type Mysql struct {
-	mysqlConfig
+	*mysqlConfig
 
 	degradeCache map[record]dnsRecordInfo
 	zoneMap      map[string]int
