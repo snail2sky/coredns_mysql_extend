@@ -43,6 +43,7 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, string, error) {
 			return id, host, zone, nil
 		}
 	}
+	logger.Warningf("Query zone %s not in zone cache", zone)
 	zoneFindCount.With(prometheus.Labels{"status": "fail"}).Inc()
 	return id, host, zone, fmt.Errorf("domain %s not exist", fqdn)
 }
@@ -73,16 +74,18 @@ func (m *Mysql) degradeWrite(record record, dnsRecordInfo dnsRecordInfo) {
 	m.degradeCache[record] = dnsRecordInfo
 }
 
-func (m *Mysql) getRecords(domainID int, host, zone, qType string) ([]record, error) {
+func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, error) {
 	var records []record
 
-	rows := m.DB.QueryRow(m.queryRecordSQL, domainID, host, qType)
+	rows := m.DB.QueryRow(m.queryRecordSQL, zoneID, host, qType)
 
 	for {
 		var record record
 		err := rows.Scan(&record.id, &record.zoneID, &record.name, &record.qType, &record.data, &record.ttl)
 		if err == sql.ErrNoRows {
 			queryDBCount.With(prometheus.Labels{"status": "success"}).Inc()
+			logger.Debugf("Query records in db used zone id %d, host %s, zone %s, type %s, records %#v", zoneID, host, zone, qType, records)
+
 			return records, nil
 		}
 		if err != nil {

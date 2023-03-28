@@ -28,11 +28,10 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	qType := state.Type()
 	degradeRecord := record{fqdn: qName, qType: qType}
 
-	logger.Debugf("FQDN %s, DNS query type %s", qName, qType)
+	logger.Debugf("New query: FQDN %s type %s", qName, qType)
 
 	// Query zone cache
 	zoneID, host, zone, err := m.getDomainInfo(qName)
-	logger.Debugf("Query zone in cache used zone id %d, host %s, zone %s", zoneID, host, zone)
 
 	// Zone not exist, maybe db error cause no zone, goto degrade entrypoint
 	if err != nil {
@@ -42,7 +41,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 	// Query DB, full match
 	records, err = m.getRecords(zoneID, host, zone, qType)
-	logger.Debugf("Query records in db used zone id %d, host %s, zone %s, type %s, records %#v", zoneID, host, zone, qType, records)
 	if err != nil {
 		logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
 		goto DegradeEntrypoint
@@ -51,14 +49,12 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// Try query CNAME type of record
 	if len(records) == zero {
 		cnameRecords, err := m.getRecords(zoneID, host, zone, cnameQtype)
-		logger.Debugf("Query CNAME records in db used zone id %d, host %s, zone %s, type %s, records %#v", zoneID, host, zone, cnameQtype, records)
 		if err != nil {
 			logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
 			goto DegradeEntrypoint
 		}
 		for _, cnameRecord := range cnameRecords {
 			cnameZoneID, cnameHost, cnameZone, err := m.getDomainInfo(cnameRecord.data)
-			logger.Debugf("Query zone in cache of CNAME point to record used zone id %d, host %s, zone %s", cnameZoneID, cnameHost, cnameZone)
 
 			if err != nil {
 				logger.Error(err)
@@ -74,7 +70,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 			answers = append(answers, rr)
 
 			cname2Records, err := m.getRecords(cnameZoneID, cnameHost, cnameZone, qType)
-			logger.Debugf("Query records in db of CNAME point to record zone id %d, host %s, zone %s, qType %s, records %#v", cnameZoneID, cnameHost, cnameZone, qType, records)
 
 			if err != nil {
 				logger.Errorf("Failed to get domain %s from database: %s", cnameHost+zoneSeparator+cnameZone, err)
@@ -159,11 +154,3 @@ DegradeEntrypoint:
 	callNextPluginCount.With(prometheus.Labels{"fqdn": qName, "qtype": qType}).Inc()
 	return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 }
-
-// func (m *Mysql) Debug() {
-// 	logger.Debugf("[DEBUG] MySQL plugin configuration: %+v", m)
-// }
-
-// func (m *Mysql) Metrics() []plugin.Metric {
-// 	return nil
-// }
