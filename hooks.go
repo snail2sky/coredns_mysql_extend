@@ -62,7 +62,7 @@ func (m *Mysql) reLoadLocalData() {
 		pureRecords := make([]pureRecord, 0)
 		content, err := os.ReadFile(m.dumpFile)
 		if err != nil {
-			time.Sleep(m.failHeartbeatTime)
+			time.Sleep(m.failReloadLocalDataTime)
 
 			logger.Errorf("Failed to load data from file: %s", err)
 			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
@@ -70,7 +70,7 @@ func (m *Mysql) reLoadLocalData() {
 		}
 		err = json.Unmarshal(content, &pureRecords)
 		if err != nil {
-			time.Sleep(m.failHeartbeatTime)
+			time.Sleep(m.failReloadLocalDataTime)
 
 			logger.Errorf("Failed to load data from file: %s", err)
 			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
@@ -95,7 +95,7 @@ func (m *Mysql) reLoadLocalData() {
 			}
 		}
 		// TODO add lock
-		time.Sleep(m.successHeartbeatTime)
+		time.Sleep(m.successReloadLocalDataTime)
 
 		m.degradeCache = tmpCache
 		logger.Debugf("Load degrade data from local file %#v", tmpCache)
