@@ -13,7 +13,7 @@ var (
 		Subsystem: pluginName,
 		Name:      "open_mysql_total",
 		Help:      "Counter of open mysql instance.",
-	}, []string{"server", "status"})
+	}, []string{"status"})
 
 	createTableCount = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: plugin.Namespace,
@@ -27,7 +27,7 @@ var (
 		Subsystem: pluginName,
 		Name:      "degrade_cache_total",
 		Help:      "Counter of degrade cache.",
-	}, []string{"server", "option", "status", "fqdn", "qtype"})
+	}, []string{"option", "status", "fqdn", "qtype"})
 
 	zoneFindCount = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: plugin.Namespace,
