@@ -136,7 +136,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		w.WriteMsg(msg)
 		// DegradeEntrypoint cache
 		dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: answers}
-		if cacheDnsRecordInfo, ok := m.degradeQuery(degradeRecord); !ok || !reflect.DeepEqual(cacheDnsRecordInfo, dnsRecordInfo) {
+		if cacheDnsRecordInfo, ok := m.degradeQuery(degradeRecord); !ok || !reflect.DeepEqual(cacheDnsRecordInfo, dnsRecordInfo.response) {
 			m.degradeWrite(degradeRecord, dnsRecordInfo)
 			logger.Debugf("Add degrade record %#v, dnsRecordInfo %#v", degradeRecord, dnsRecordInfo)
 			// TODO degrade_cache{option='update', status='success', fqdn='degradeRecord.fqdn', qtype='degradeRecord.qType'}
