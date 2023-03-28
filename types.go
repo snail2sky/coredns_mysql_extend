@@ -15,7 +15,7 @@ type Mysql struct {
 	zoneMap      map[string]int
 
 	Next plugin.Handler
-	DB   *sql.DB
+	db   *sql.DB
 }
 
 type pureRecord map[string][]string

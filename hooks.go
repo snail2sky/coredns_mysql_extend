@@ -13,9 +13,13 @@ import (
 
 func (m *Mysql) rePing() {
 	for {
-		if err := m.DB.Ping(); err != nil {
+		if err := m.db.Ping(); err != nil {
 			time.Sleep(m.failHeartbeatTime)
-
+			m.db.Close()
+			newDB, err := m.openDB()
+			if err != nil {
+				m.db = newDB
+			}
 			logger.Errorf("Failed to ping database: %s", err)
 			dbPingCount.With(prometheus.Labels{"status": "fail"}).Inc()
 			continue
@@ -30,7 +34,7 @@ func (m *Mysql) rePing() {
 func (m *Mysql) reGetZone() {
 	for {
 		zoneMap := make(map[string]int, 0)
-		rows, err := m.DB.Query(m.queryZoneSQL)
+		rows, err := m.db.Query(m.queryZoneSQL)
 		if err != nil {
 			time.Sleep(m.failHeartbeatTime)
 
@@ -103,9 +107,7 @@ func (m *Mysql) reLoadLocalData() {
 	}
 }
 
-func (m *Mysql) onStartup() error {
-	logger.Debug("On start up")
-	// Initialize database connection pool
+func (m *Mysql) openDB() (*sql.DB, error) {
 	db, err := sql.Open("mysql", m.dsn)
 	if err != nil {
 		openMysqlCount.With(prometheus.Labels{"status": "fail"}).Inc()
@@ -114,6 +116,13 @@ func (m *Mysql) onStartup() error {
 		openMysqlCount.With(prometheus.Labels{"status": "success"}).Inc()
 		logger.Debug("Success to open database")
 	}
+	return db, err
+}
+
+func (m *Mysql) onStartup() error {
+	logger.Debug("On start up")
+	// Initialize database connection pool
+	db, _ := m.openDB()
 
 	// Config db connection pool
 	db.SetConnMaxIdleTime(m.connMaxIdleTime)
@@ -121,7 +130,7 @@ func (m *Mysql) onStartup() error {
 	db.SetMaxIdleConns(m.maxIdleConns)
 	db.SetMaxOpenConns(m.maxOpenConns)
 
-	m.DB = db
+	m.db = db
 
 	// Start rePing loop
 	go m.rePing()
@@ -136,8 +145,8 @@ func (m *Mysql) onStartup() error {
 
 func (m *Mysql) onShutdown() error {
 	logger.Debug("on shutdown")
-	if m.DB != nil {
-		m.DB.Close()
+	if m.db != nil {
+		m.db.Close()
 	}
 	// Dump memory data to local file
 	m.dump2LocalData()

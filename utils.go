@@ -77,7 +77,7 @@ func (m *Mysql) degradeWrite(record record, dnsRecordInfo dnsRecordInfo) {
 func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, error) {
 	var records []record
 
-	rows := m.DB.QueryRow(m.queryRecordSQL, zoneID, host, qType)
+	rows := m.db.QueryRow(m.queryRecordSQL, zoneID, host, qType)
 
 	for {
 		var record record

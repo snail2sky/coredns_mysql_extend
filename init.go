@@ -176,7 +176,7 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 }
 
 func (m *Mysql) createTables() {
-	_, err := m.DB.Exec(`
+	_, err := m.db.Exec(`
         CREATE TABLE IF NOT EXISTS ` + m.zonesTable + ` (
             id INT NOT NULL AUTO_INCREMENT,
             zone_name VARCHAR(255) NOT NULL,
@@ -191,7 +191,7 @@ func (m *Mysql) createTables() {
 		createTableCount.With(prometheus.Labels{"status": "success", "table_name": m.zonesTable}).Inc()
 	}
 
-	_, err = m.DB.Exec(`
+	_, err = m.db.Exec(`
         CREATE TABLE IF NOT EXISTS ` + m.recordsTable + ` (
             id INT NOT NULL AUTO_INCREMENT,
             zone_id INT NOT NULL,
