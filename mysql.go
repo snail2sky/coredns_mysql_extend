@@ -156,7 +156,7 @@ DegradeEntrypoint:
 		return dns.RcodeSuccess, nil
 	}
 	logger.Debug("Call next plugin")
-	callNextPluginCount.With(prometheus.Labels{"fqdn": qName, "qtpe": qType}).Inc()
+	callNextPluginCount.With(prometheus.Labels{"fqdn": qName, "qtype": qType}).Inc()
 	return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 }
 

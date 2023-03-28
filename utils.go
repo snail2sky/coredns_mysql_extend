@@ -73,10 +73,10 @@ func (m *Mysql) degradeWrite(record record, dnsRecordInfo dnsRecordInfo) {
 	m.degradeCache[record] = dnsRecordInfo
 }
 
-func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, error) {
+func (m *Mysql) getRecords(domainID int, host, zone, qType string) ([]record, error) {
 	var records []record
 
-	rows := m.DB.QueryRow(m.queryRecordSQL, domainID, host, qtype)
+	rows := m.DB.QueryRow(m.queryRecordSQL, domainID, host, qType)
 
 	for {
 		var record record
