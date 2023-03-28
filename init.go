@@ -122,19 +122,19 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 				} else {
 					m.successHeartbeatTime = userSuccessHeartBeatTime
 				}
-			case "success_reload_local_data_time":
-				userSuccessReloadLocalDataTime, err := time.ParseDuration(c.Val())
-				if err != nil || userSuccessReloadLocalDataTime <= zeroTime {
-					m.successHeartbeatTime = defaultSuccessHeartBeatTime
-				} else {
-					m.successHeartbeatTime = userSuccessReloadLocalDataTime
-				}
 			case "fail_reload_local_data_time":
 				userFailReloadLocalDataTime, err := time.ParseDuration(c.Val())
 				if err != nil || userFailReloadLocalDataTime <= zeroTime {
-					m.successHeartbeatTime = defaultSuccessHeartBeatTime
+					m.failReloadLocalDataTime = defaultFailReloadLocalDataTime
 				} else {
-					m.successHeartbeatTime = userFailReloadLocalDataTime
+					m.failReloadLocalDataTime = userFailReloadLocalDataTime
+				}
+			case "success_reload_local_data_time":
+				userSuccessReloadLocalDataTime, err := time.ParseDuration(c.Val())
+				if err != nil || userSuccessReloadLocalDataTime <= zeroTime {
+					m.successReloadLocalDataTime = defaultSuccessReloadLocalDataTime
+				} else {
+					m.successReloadLocalDataTime = userSuccessReloadLocalDataTime
 				}
 			case "query_zone_sql":
 				m.queryZoneSQL = c.Val()
