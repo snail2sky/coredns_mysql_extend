@@ -14,22 +14,28 @@ import (
 func (m *Mysql) rePing() {
 	for {
 		if err := m.DB.Ping(); err != nil {
-			logger.Errorf("Failed to ping database: %s", err)
 			time.Sleep(m.failHeartbeatTime)
+
+			logger.Errorf("Failed to ping database: %s", err)
+			dbPingCount.With(prometheus.Labels{"status": "fail"}).Inc()
 			continue
 		}
 		time.Sleep(m.successHeartbeatTime)
+
+		logger.Debug("Success to ping database")
+		dbPingCount.With(prometheus.Labels{"status": "success"}).Inc()
 	}
 }
 
 func (m *Mysql) reGetZone() {
 	for {
 		zoneMap := make(map[string]int, 0)
-
 		rows, err := m.DB.Query(m.queryZoneSQL)
 		if err != nil {
 			time.Sleep(m.failHeartbeatTime)
+
 			logger.Errorf("Failed to query zones: %s", err)
+			dbGetZoneCount.With(prometheus.Labels{"status": "fail"}).Inc()
 			continue
 		}
 
@@ -41,9 +47,11 @@ func (m *Mysql) reGetZone() {
 			}
 			zoneMap[zoneRecord.name] = zoneRecord.id
 		}
-		m.zoneMap = zoneMap
-		logger.Debugf("Zone %#v", zoneMap)
 		time.Sleep(m.successHeartbeatTime)
+
+		m.zoneMap = zoneMap
+		logger.Debugf("Success to query zones: %#v", zoneMap)
+		dbGetZoneCount.With(prometheus.Labels{"status": "success"}).Inc()
 	}
 }
 
@@ -55,11 +63,17 @@ func (m *Mysql) reLoadLocalData() {
 		content, err := os.ReadFile(m.dumpFile)
 		if err != nil {
 			time.Sleep(m.failHeartbeatTime)
+
+			logger.Errorf("Failed to load data from file: %s", err)
+			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
 			return
 		}
 		err = json.Unmarshal(content, &pureRecords)
 		if err != nil {
 			time.Sleep(m.failHeartbeatTime)
+
+			logger.Errorf("Failed to load data from file: %s", err)
+			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
 			return
 		}
 
@@ -81,9 +95,11 @@ func (m *Mysql) reLoadLocalData() {
 			}
 		}
 		// TODO add lock
+		time.Sleep(m.successHeartbeatTime)
+
 		m.degradeCache = tmpCache
 		logger.Debugf("Load degrade data from local file %#v", tmpCache)
-		time.Sleep(m.successHeartbeatTime)
+		loadLocalData.With(prometheus.Labels{"status": "success"}).Inc()
 	}
 }
 

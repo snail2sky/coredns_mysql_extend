@@ -56,4 +56,32 @@ var (
 		Name:      "make_answer_total",
 		Help:      "Counter of make answer count.",
 	}, []string{"status"})
+
+	dbPingCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: plugin.Namespace,
+		Subsystem: pluginName,
+		Name:      "db_ping_total",
+		Help:      "Counter of DB ping.",
+	}, []string{"status"})
+
+	dbGetZoneCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: plugin.Namespace,
+		Subsystem: pluginName,
+		Name:      "db_get_zone_total",
+		Help:      "Counter of db get zone.",
+	}, []string{"status"})
+
+	loadLocalData = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: plugin.Namespace,
+		Subsystem: pluginName,
+		Name:      "load_local_data_total",
+		Help:      "Counter of load local data.",
+	}, []string{"status"})
+
+	dumpLocalData = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: plugin.Namespace,
+		Subsystem: pluginName,
+		Name:      "dump_local_data_total",
+		Help:      "Counter of dump local data.",
+	}, []string{"status"})
 )

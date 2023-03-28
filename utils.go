@@ -43,7 +43,7 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, string, error) {
 			return id, host, zone, nil
 		}
 	}
-	logger.Warningf("Query zone %s not in zone cache", zone)
+	logger.Warningf("Query zone %s not in zone cache, fqdn: %s", zone, fqdn)
 	zoneFindCount.With(prometheus.Labels{"status": "fail"}).Inc()
 	return id, host, zone, fmt.Errorf("domain %s not exist", fqdn)
 }

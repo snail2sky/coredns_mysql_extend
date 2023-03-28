@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (m *Mysql) dump2LocalData() {
@@ -17,9 +19,16 @@ func (m *Mysql) dump2LocalData() {
 
 	content, err := json.Marshal(pureRecord)
 	if err != nil {
+		logger.Errorf("Failed to dump data to local: %s", err)
+		dumpLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
 		return
 	}
 	if err := os.WriteFile(m.dumpFile, content, safeMode); err != nil {
 		logger.Error(err)
+		logger.Errorf("Failed to dump data to local: %s", err)
+		dumpLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
+		return
 	}
+	logger.Debug("Failed to dump data to local")
+	dumpLocalData.With(prometheus.Labels{"status": "success"}).Inc()
 }
