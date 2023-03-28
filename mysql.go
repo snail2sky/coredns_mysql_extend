@@ -35,7 +35,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 	// Zone not exist, maybe db error cause no zone, goto degrade entrypoint
 	if err != nil {
-		logger.Error(err)
 		goto DegradeEntrypoint
 	}
 
@@ -57,7 +56,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 			cnameZoneID, cnameHost, cnameZone, err := m.getDomainInfo(cnameRecord.data)
 
 			if err != nil {
-				logger.Error(err)
 				goto DegradeEntrypoint
 			}
 
