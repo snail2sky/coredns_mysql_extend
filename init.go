@@ -34,10 +34,12 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 		connMaxIdleTime: defaultConnMaxIdleTime,
 		connMaxLifetime: defaultConnMaxLifeTime,
 
-		failHeartbeatTime:    defaultFailHeartBeatTime,
-		successHeartbeatTime: defaultSuccessHeartBeatTime,
-		queryZoneSQL:         defaultQueryZoneSQL,
-		queryRecordSQL:       defaultQueryRecordSQL,
+		failHeartbeatTime:          defaultFailHeartBeatTime,
+		successHeartbeatTime:       defaultSuccessHeartBeatTime,
+		failReloadLocalDataTime:    defaultFailReloadLocalDataTime,
+		successReloadLocalDataTime: defaultSuccessReloadLocalDataTime,
+		queryZoneSQL:               defaultQueryZoneSQL,
+		queryRecordSQL:             defaultQueryRecordSQL,
 	}
 
 	m.mysqlConfig = mysqlConfig
@@ -119,6 +121,20 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 					m.successHeartbeatTime = defaultSuccessHeartBeatTime
 				} else {
 					m.successHeartbeatTime = userSuccessHeartBeatTime
+				}
+			case "success_reload_local_data_time":
+				userSuccessReloadLocalDataTime, err := time.ParseDuration(c.Val())
+				if err != nil || userSuccessReloadLocalDataTime <= zeroTime {
+					m.successHeartbeatTime = defaultSuccessHeartBeatTime
+				} else {
+					m.successHeartbeatTime = userSuccessReloadLocalDataTime
+				}
+			case "fail_reload_local_data_time":
+				userFailReloadLocalDataTime, err := time.ParseDuration(c.Val())
+				if err != nil || userFailReloadLocalDataTime <= zeroTime {
+					m.successHeartbeatTime = defaultSuccessHeartBeatTime
+				} else {
+					m.successHeartbeatTime = userFailReloadLocalDataTime
 				}
 			case "query_zone_sql":
 				m.queryZoneSQL = c.Val()

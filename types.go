@@ -32,8 +32,10 @@ type mysqlConfig struct {
 	connMaxIdleTime time.Duration
 	connMaxLifetime time.Duration
 
-	failHeartbeatTime    time.Duration
-	successHeartbeatTime time.Duration
+	failHeartbeatTime          time.Duration
+	successHeartbeatTime       time.Duration
+	failReloadLocalDataTime    time.Duration
+	successReloadLocalDataTime time.Duration
 
 	queryZoneSQL   string
 	queryRecordSQL string
