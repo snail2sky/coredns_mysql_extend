@@ -89,7 +89,8 @@ func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, erro
 			return records, nil
 		}
 		if err != nil {
-			queryDBCount.With(prometheus.Labels{"status": "success"}).Inc()
+			queryDBCount.With(prometheus.Labels{"status": "fail"}).Inc()
+			logger.Debugf("Failed to get records for domain %s from database: %s", record.fqdn, err)
 			return nil, err
 		}
 		record.zoneName = zone
@@ -104,7 +105,7 @@ func (m *Mysql) makeAnswer(rrString string) (dns.RR, error) {
 		makeAnswerCount.With(prometheus.Labels{"status": "fail"}).Inc()
 		logger.Errorf("Failed to create DNS record: %s", err)
 	} else {
-		makeAnswerCount.With(prometheus.Labels{"status": "fail"}).Inc()
+		makeAnswerCount.With(prometheus.Labels{"status": "success"}).Inc()
 	}
 	return rr, nil
 }

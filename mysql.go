@@ -41,7 +41,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// Query DB, full match
 	records, err = m.getRecords(zoneID, host, zone, qType)
 	if err != nil {
-		logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
 		goto DegradeEntrypoint
 	}
 
@@ -49,7 +48,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	if len(records) == zero {
 		cnameRecords, err := m.getRecords(zoneID, host, zone, cnameQtype)
 		if err != nil {
-			logger.Errorf("Failed to get records for domain %s from database: %s", qName, err)
 			goto DegradeEntrypoint
 		}
 		for _, cnameRecord := range cnameRecords {
@@ -70,7 +68,6 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 			cname2Records, err := m.getRecords(cnameZoneID, cnameHost, cnameZone, qType)
 
 			if err != nil {
-				logger.Errorf("Failed to get domain %s from database: %s", cnameHost+zoneSeparator+cnameZone, err)
 				goto DegradeEntrypoint
 			}
 
@@ -89,10 +86,8 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// Process records
 	for _, record := range records {
 		rrString := fmt.Sprintf("%s %d IN %s %s", record.fqdn, record.ttl, record.qType, record.data)
-		rr, err := dns.NewRR(rrString)
-		rrStrings = append(rrStrings, rrString)
+		rr, err := m.makeAnswer(rrString)
 		if err != nil {
-			logger.Errorf("Failed to create DNS record: %s", err)
 			continue
 		}
 		answers = append(answers, rr)
@@ -101,15 +96,15 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// Handle wildcard domains
 	if len(answers) == zero && strings.Count(qName, zoneSeparator) > 1 {
 		baseZone := m.getBaseZone(qName)
-		domainID, ok := m.getZoneID(baseZone)
+		zoneID, ok := m.getZoneID(baseZone)
 		wildcardName := wildcard + zoneSeparator + baseZone
 		if !ok {
-			logger.Errorf("Failed to get zone %s from database: %s", qName, err)
+			logger.Debugf("Failed to get zone %s from database: %s", qName, err)
 			goto DegradeEntrypoint
 		}
-		records, err := m.getRecords(domainID, wildcard, zone, qType)
+		records, err := m.getRecords(zoneID, wildcard, zone, qType)
 		if err != nil {
-			logger.Errorf("Failed to get records for domain %s from database: %s", wildcardName, err)
+			logger.Debugf("Failed to get records for domain %s from database: %s", wildcardName, err)
 			goto DegradeEntrypoint
 		}
 
