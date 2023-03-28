@@ -1,7 +1,6 @@
 package coredns_mysql_extend
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -129,10 +128,6 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 			}
 		}
 	}
-	mysqlConfig.queryZoneSQL = fmt.Sprintf(mysqlConfig.queryZoneSQL, mysqlConfig.zonesTable)
-	mysqlConfig.queryRecordSQL = fmt.Sprintf(mysqlConfig.queryRecordSQL, mysqlConfig.recordsTable)
-	logger.Errorf("Query zone SQL: %s", mysqlConfig.queryZoneSQL)
-	logger.Errorf("Query record SQL: %s", mysqlConfig.queryRecordSQL)
 	return nil
 }
 
