@@ -130,6 +130,8 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 		}
 		m.queryZoneSQL = fmt.Sprintf(m.queryZoneSQL, m.zonesTable)
 		m.queryRecordSQL = fmt.Sprintf(m.queryRecordSQL, m.recordsTable)
+		logger.Debugf("Query zone SQL: %s", m.queryZoneSQL)
+		logger.Debugf("Query record SQL: %s", m.queryRecordSQL)
 	}
 	return nil
 }
