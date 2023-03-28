@@ -87,6 +87,9 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 					m.maxIdleConns = userMaxIdleConns
 				}
 			case "db_max_open_conns":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
 				userMaxOpenConns, err := strconv.Atoi(c.Val())
 				if err != nil || userMaxOpenConns <= zero {
 					m.maxOpenConns = defaultMaxOpenConns
@@ -94,6 +97,9 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 					m.maxOpenConns = userMaxOpenConns
 				}
 			case "db_conn_max_idle_time":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
 				userConnMaxIdleTime, err := time.ParseDuration(c.Val())
 				if err != nil || userConnMaxIdleTime <= zeroTime {
 					m.connMaxIdleTime = defaultConnMaxIdleTime
@@ -101,6 +107,9 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 					m.connMaxIdleTime = userConnMaxIdleTime
 				}
 			case "db_conn_max_life_time":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
 				userConnMaxLifeTime, err := time.ParseDuration(c.Val())
 				if err != nil || userConnMaxLifeTime <= zeroTime {
 					m.connMaxLifetime = defaultConnMaxLifeTime
@@ -109,6 +118,9 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 
 				}
 			case "fail_heartbeat_time":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
 				userFailHeartBeatTime, err := time.ParseDuration(c.Val())
 				if err != nil || userFailHeartBeatTime <= zeroTime {
 					m.failHeartbeatTime = defaultFailHeartBeatTime
@@ -116,6 +128,9 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 					m.failHeartbeatTime = userFailHeartBeatTime
 				}
 			case "success_heartbeat_time":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
 				userSuccessHeartBeatTime, err := time.ParseDuration(c.Val())
 				if err != nil || userSuccessHeartBeatTime <= zeroTime {
 					m.successHeartbeatTime = defaultSuccessHeartBeatTime
@@ -123,6 +138,9 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 					m.successHeartbeatTime = userSuccessHeartBeatTime
 				}
 			case "fail_reload_local_data_time":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
 				userFailReloadLocalDataTime, err := time.ParseDuration(c.Val())
 				if err != nil || userFailReloadLocalDataTime <= zeroTime {
 					m.failReloadLocalDataTime = defaultFailReloadLocalDataTime
@@ -130,6 +148,9 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 					m.failReloadLocalDataTime = userFailReloadLocalDataTime
 				}
 			case "success_reload_local_data_time":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
 				userSuccessReloadLocalDataTime, err := time.ParseDuration(c.Val())
 				if err != nil || userSuccessReloadLocalDataTime <= zeroTime {
 					m.successReloadLocalDataTime = defaultSuccessReloadLocalDataTime
@@ -137,8 +158,14 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 					m.successReloadLocalDataTime = userSuccessReloadLocalDataTime
 				}
 			case "query_zone_sql":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
 				m.queryZoneSQL = c.Val()
 			case "query_record_sql":
+				if !c.NextArg() {
+					return c.ArgErr()
+				}
 				m.queryRecordSQL = c.Val()
 			default:
 				return c.Errf("unknown property '%s'", c.Val())
