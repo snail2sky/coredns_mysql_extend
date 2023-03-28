@@ -113,6 +113,11 @@ func (m *Mysql) openDB() (*sql.DB, error) {
 		openMysqlCount.With(prometheus.Labels{"status": "fail"}).Inc()
 		logger.Errorf("Failed to open database: %s", err)
 	} else {
+		// Config db connection pool
+		db.SetConnMaxIdleTime(m.connMaxIdleTime)
+		db.SetConnMaxLifetime(m.connMaxLifetime)
+		db.SetMaxIdleConns(m.maxIdleConns)
+		db.SetMaxOpenConns(m.maxOpenConns)
 		openMysqlCount.With(prometheus.Labels{"status": "success"}).Inc()
 		logger.Debug("Success to open database")
 	}
@@ -123,12 +128,6 @@ func (m *Mysql) onStartup() error {
 	logger.Debug("On start up")
 	// Initialize database connection pool
 	db, _ := m.openDB()
-
-	// Config db connection pool
-	db.SetConnMaxIdleTime(m.connMaxIdleTime)
-	db.SetConnMaxLifetime(m.connMaxLifetime)
-	db.SetMaxIdleConns(m.maxIdleConns)
-	db.SetMaxOpenConns(m.maxOpenConns)
 
 	m.db = db
 
