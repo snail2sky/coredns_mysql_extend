@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	registMatrics()
+	// registMatrics()
 	plugin.Register(pluginName, setup)
 }
 
