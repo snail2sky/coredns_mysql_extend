@@ -1,6 +1,8 @@
 package coredns_mysql_extend
 
 import (
+	"fmt"
+
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
@@ -19,6 +21,10 @@ func setup(c *caddy.Controller) error {
 
 	// Parse configuration
 	mysql.parseConfig(c)
+	mysql.queryZoneSQL = fmt.Sprintf(mysql.queryZoneSQL, mysql.zonesTable)
+	mysql.queryRecordSQL = fmt.Sprintf(mysql.queryRecordSQL, mysql.recordsTable)
+	logger.Debugf("Query zone SQL: %s", mysql.queryZoneSQL)
+	logger.Debugf("Query record SQL: %s", mysql.queryRecordSQL)
 
 	// Exec options when start up
 	c.OnStartup(mysql.onStartup)
