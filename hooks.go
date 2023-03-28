@@ -17,7 +17,7 @@ func (m *Mysql) rePing() {
 			time.Sleep(m.failHeartbeatTime)
 			m.db.Close()
 			newDB, err := m.openDB()
-			if err != nil {
+			if err == nil {
 				m.db = newDB
 			}
 			logger.Errorf("Failed to ping database: %s", err)
