@@ -20,7 +20,7 @@ var (
 		Subsystem: pluginName,
 		Name:      "create_table_total",
 		Help:      "Counter of create table",
-	}, []string{"server", "status", "table_name"})
+	}, []string{"status", "table_name"})
 
 	degradeCacheCount = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: plugin.Namespace,
@@ -34,19 +34,26 @@ var (
 		Subsystem: pluginName,
 		Name:      "zone_find_total",
 		Help:      "Counter of zone find.",
-	}, []string{"server", "status"})
+	}, []string{"status"})
+
+	callNextPluginCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: plugin.Namespace,
+		Subsystem: pluginName,
+		Name:      "call_next_plugin_total",
+		Help:      "Counter of next plugin call.",
+	}, []string{"fqdn", "qtype"})
 
 	queryDBCount = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: plugin.Namespace,
 		Subsystem: pluginName,
 		Name:      "query_db_total",
 		Help:      "Counter of query db.",
-	}, []string{"server", "status"})
+	}, []string{"status"})
 
 	makeAnswerCount = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: plugin.Namespace,
 		Subsystem: pluginName,
 		Name:      "make_answer_total",
 		Help:      "Counter of make answer count.",
-	}, []string{"server", "status"})
+	}, []string{"status"})
 )

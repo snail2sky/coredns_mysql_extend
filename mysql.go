@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/coredns/coredns/plugin"
+	"github.com/prometheus/client_golang/prometheus"
 
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/request"
@@ -139,10 +140,10 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		if cacheDnsRecordInfo, ok := m.degradeQuery(degradeRecord); !ok || !reflect.DeepEqual(cacheDnsRecordInfo, dnsRecordInfo.response) {
 			m.degradeWrite(degradeRecord, dnsRecordInfo)
 			logger.Debugf("Add degrade record %#v, dnsRecordInfo %#v", degradeRecord, dnsRecordInfo)
-			// TODO degrade_cache{option='update', status='success', fqdn='degradeRecord.fqdn', qtype='degradeRecord.qType'}
+			degradeCacheCount.With(prometheus.Labels{"status": "success", "option": "update", "fqdn": degradeRecord.fqdn, "qtype": degradeRecord.qType}).Inc()
 			return dns.RcodeSuccess, nil
 		}
-		// TODO degrade_cache{option='null', status='success', fqdn='degradeRecord.fqdn', qtype='degradeRecord.qType'}
+		degradeCacheCount.With(prometheus.Labels{"status": "success", "option": "null", "fqdn": degradeRecord.fqdn, "qtype": degradeRecord.qType}).Inc()
 		return dns.RcodeSuccess, nil
 	}
 
@@ -155,7 +156,7 @@ DegradeEntrypoint:
 		return dns.RcodeSuccess, nil
 	}
 	logger.Debug("Call next plugin")
-	// TODO call_next_plugin{fqdn='qName', qtype='qType'}
+	callNextPluginCount.With(prometheus.Labels{"fqdn": qName, "qtpe": qType}).Inc()
 	return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 }
 

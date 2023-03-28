@@ -90,7 +90,6 @@ func (m *Mysql) onStartup() error {
 	// Initialize database connection pool
 	db, err := sql.Open("mysql", m.dsn)
 	if err != nil {
-		// TODO open_mysql{status='fail'}
 		openMysqlCount.With(prometheus.Labels{"status": "fail"}).Inc()
 		logger.Errorf("Failed to open database: %s", err)
 	} else {

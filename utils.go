@@ -39,11 +39,11 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, string, error) {
 		}
 		if ok {
 			logger.Debugf("Query zone %s in zone cache", zone)
-			// TODO zone_find{'status'='success'}
+			zoneFindCount.With(prometheus.Labels{"status": "success"}).Inc()
 			return id, host, zone, nil
 		}
 	}
-	// TODO zone_find{'status'='fail'}
+	zoneFindCount.With(prometheus.Labels{"status": "fail"}).Inc()
 	return id, host, zone, fmt.Errorf("domain %s not exist", fqdn)
 }
 
@@ -63,10 +63,8 @@ func (m *Mysql) degradeQuery(record record) ([]dns.RR, bool) {
 	dnsRecordInfo, ok := m.degradeCache[record]
 	if !ok {
 		degradeCacheCount.With(prometheus.Labels{"option": "query", "status": "fail", "fqdn": record.fqdn, "qtype": record.qType}).Inc()
-		// TODO degrade_cache{option='query', status='fail', fqdn='record.fqdn', qtype='record.qType'}
 	} else {
 		degradeCacheCount.With(prometheus.Labels{"option": "query", "status": "success", "fqdn": record.fqdn, "qtype": record.qType}).Inc()
-		// TODO degrade_cache{option='query', status='success', fqdn='record.fqdn', qtype='record.qType'}
 	}
 	return dnsRecordInfo.response, ok
 }
@@ -84,11 +82,11 @@ func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, er
 		var record record
 		err := rows.Scan(&record.id, &record.zoneID, &record.name, &record.qType, &record.data, &record.ttl)
 		if err == sql.ErrNoRows {
-			// TODO query_db{status='success'}
+			queryDBCount.With(prometheus.Labels{"status": "success"}).Inc()
 			return records, nil
 		}
 		if err != nil {
-			// TODO query_db{status='fail'}
+			queryDBCount.With(prometheus.Labels{"status": "success"}).Inc()
 			return nil, err
 		}
 		record.zoneName = zone
@@ -100,9 +98,10 @@ func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, er
 func (m *Mysql) makeAnswer(rrString string) (dns.RR, error) {
 	rr, err := dns.NewRR(rrString)
 	if err != nil {
-		// TODO make_answer{status='fail'}
+		makeAnswerCount.With(prometheus.Labels{"status": "fail"}).Inc()
 		logger.Errorf("Failed to create DNS record: %s", err)
+	} else {
+		makeAnswerCount.With(prometheus.Labels{"status": "fail"}).Inc()
 	}
-	// TODO make_answer{status='success'}
 	return rr, nil
 }

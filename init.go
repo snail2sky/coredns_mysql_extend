@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/coredns/caddy"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (m *Mysql) Name() string {
@@ -141,8 +142,10 @@ func (m *Mysql) createTables() {
         );
     `)
 	if err != nil {
-		// TODO create_table{status='fail', table_name=''}
+		createTableCount.With(prometheus.Labels{"status": "fail", "table_name": m.zonesTable}).Inc()
 		logger.Error(err)
+	} else {
+		createTableCount.With(prometheus.Labels{"status": "success", "table_name": m.zonesTable}).Inc()
 	}
 
 	_, err = m.DB.Exec(`
@@ -159,7 +162,10 @@ func (m *Mysql) createTables() {
         );
     `)
 	if err != nil {
-		// TODO create_table{status='fail', table_name=''}
+		createTableCount.With(prometheus.Labels{"status": "fail", "table_name": m.recordsTable}).Inc()
 		logger.Error(err)
+	} else {
+		createTableCount.With(prometheus.Labels{"status": "success", "table_name": m.recordsTable}).Inc()
+
 	}
 }
