@@ -7,6 +7,7 @@ import (
 )
 
 func init() {
+	registMatrics()
 	plugin.Register(pluginName, setup)
 }
 
@@ -18,10 +19,6 @@ func setup(c *caddy.Controller) error {
 
 	// Parse configuration
 	mysql.parseConfig(c)
-
-	// Init global var
-	zoneQuerySQL = `SELECT id, zone_name FROM ` + mysql.zonesTable
-	recordQuerySQL = `SELECT id, zone_id, hostname, type, data, ttl FROM ` + mysql.recordsTable + ` WHERE online!=0 and zone_id=? and hostname=? and type=?`
 
 	// Exec options when start up
 	c.OnStartup(mysql.onStartup)

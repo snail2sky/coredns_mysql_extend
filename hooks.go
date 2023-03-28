@@ -2,7 +2,13 @@ package coredns_mysql_extend
 
 import (
 	"database/sql"
+	"encoding/json"
+	"os"
+	"strings"
 	"time"
+
+	"github.com/miekg/dns"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (m *Mysql) rePing() {
@@ -17,9 +23,9 @@ func (m *Mysql) rePing() {
 }
 
 func (m *Mysql) reGetZone() {
-	var zoneMap = make(map[string]int, 0)
+	zoneMap := make(map[string]int, 0)
 	for {
-		rows, err := m.DB.Query(zoneQuerySQL)
+		rows, err := m.DB.Query(m.queryZoneSQL)
 		if err != nil {
 			time.Sleep(m.failHeartbeatTime)
 			logger.Errorf("Failed to query zones: %s", err)
@@ -40,12 +46,56 @@ func (m *Mysql) reGetZone() {
 	}
 }
 
+func (m *Mysql) reLoadLocalData() {
+	tmpCache := make(map[record]dnsRecordInfo, 0)
+	for {
+		pureRecords := make([]pureRecord, 0)
+		content, err := os.ReadFile(m.dumpFile)
+		if err != nil {
+			time.Sleep(m.failHeartbeatTime)
+			return
+		}
+		err = json.Unmarshal(content, &pureRecords)
+		if err != nil {
+			time.Sleep(m.failHeartbeatTime)
+			return
+		}
+
+		for _, rMap := range pureRecords {
+			for queryKey, rrStrings := range rMap {
+				var response []dns.RR
+				queryKeySlice := strings.Split(queryKey, keySeparator)
+				fqdn, qType := queryKeySlice[0], queryKeySlice[1]
+				record := record{fqdn: fqdn, qType: qType}
+				for _, rrString := range rrStrings {
+					rr, err := dns.NewRR(rrString)
+					if err != nil {
+						continue
+					}
+					response = append(response, rr)
+				}
+				dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: response}
+				tmpCache[record] = dnsRecordInfo
+			}
+		}
+		// TODO add lock
+		m.degradeCache = tmpCache
+		logger.Debug("Load degrade data from local file")
+		time.Sleep(m.successHeartbeatTime)
+	}
+}
+
 func (m *Mysql) onStartup() error {
 	logger.Debug("On start up")
 	// Initialize database connection pool
 	db, err := sql.Open("mysql", m.dsn)
 	if err != nil {
+		// TODO open_mysql{status='fail'}
+		openMysqlCount.With(prometheus.Labels{"status": "fail"}).Inc()
 		logger.Errorf("Failed to open database: %s", err)
+	} else {
+		openMysqlCount.With(prometheus.Labels{"status": "success"}).Inc()
+		logger.Debug("Success to open database")
 	}
 
 	// Config db connection pool
@@ -54,20 +104,16 @@ func (m *Mysql) onStartup() error {
 	db.SetMaxIdleConns(m.maxIdleConns)
 	db.SetMaxOpenConns(m.maxOpenConns)
 
-	// Load local file data
-	m.loadLocalData()
-
 	m.DB = db
 
-	// Start retry loop
+	// Start rePing loop
 	go m.rePing()
+	// start reGetZone loop
 	go m.reGetZone()
+	// start reLoad local file data loop
+	go m.reLoadLocalData()
 
-	err = m.createTables()
-	if err != nil {
-		logger.Error(err)
-	}
-	logger.Debugf("Load degrade data")
+	m.createTables()
 	return nil
 }
 

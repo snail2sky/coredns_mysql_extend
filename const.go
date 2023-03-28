@@ -15,6 +15,9 @@ const (
 	defaultFailHeartBeatTime    = time.Second * 5
 	defaultSuccessHeartBeatTime = time.Second * 60
 
+	defaultQueryZoneSQL   = `SELECT id, zone_name FROM %s`
+	defaultQueryRecordSQL = `SELECT id, zone_id, hostname, type, data, ttl FROM  %s WHERE online!=0 and zone_id=? and hostname=? and type=?`
+
 	zero          = 0
 	zeroTime      = zero
 	safeMode      = 0640

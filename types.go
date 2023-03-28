@@ -34,6 +34,9 @@ type mysqlConfig struct {
 
 	failHeartbeatTime    time.Duration
 	successHeartbeatTime time.Duration
+
+	queryZoneSQL   string
+	queryRecordSQL string
 }
 
 type dnsRecordInfo struct {

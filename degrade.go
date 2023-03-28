@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
-
-	"github.com/miekg/dns"
 )
 
 func (m *Mysql) dump2LocalData() {
@@ -24,34 +21,5 @@ func (m *Mysql) dump2LocalData() {
 	}
 	if err := os.WriteFile(m.dumpFile, content, safeMode); err != nil {
 		logger.Error(err)
-	}
-}
-
-func (m *Mysql) loadLocalData() {
-	m.degradeCache = make(map[record]dnsRecordInfo, 0)
-	pureRecords := make([]pureRecord, 0)
-	content, err := os.ReadFile(m.dumpFile)
-	if err != nil {
-		return
-	}
-	err = json.Unmarshal(content, &pureRecords)
-	if err != nil {
-		return
-	}
-	for _, rMap := range pureRecords {
-		for queryKey, rrStrings := range rMap {
-			var response []dns.RR
-			queryKeySlice := strings.Split(queryKey, keySeparator)
-			fqdn, qType := queryKeySlice[0], queryKeySlice[1]
-			record := record{fqdn: fqdn, qType: qType}
-			for _, rrString := range rrStrings {
-				rr, err := dns.NewRR(rrString)
-				if err != nil {
-					continue
-				}
-				response = append(response, rr)
-			}
-			m.degradeCache[record] = dnsRecordInfo{rrStrings: rrStrings, response: response}
-		}
 	}
 }

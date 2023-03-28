@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/miekg/dns"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func MakeMysqlPlugin() *Mysql {
@@ -38,10 +39,11 @@ func (m *Mysql) getDomainInfo(fqdn string) (int, string, string, error) {
 		}
 		if ok {
 			logger.Debugf("Query zone %s in zone cache", zone)
+			// TODO zone_find{'status'='success'}
 			return id, host, zone, nil
 		}
 	}
-
+	// TODO zone_find{'status'='fail'}
 	return id, host, zone, fmt.Errorf("domain %s not exist", fqdn)
 }
 
@@ -59,26 +61,48 @@ func (m *Mysql) getBaseZone(fqdn string) string {
 
 func (m *Mysql) degradeQuery(record record) ([]dns.RR, bool) {
 	dnsRecordInfo, ok := m.degradeCache[record]
+	if !ok {
+		degradeCacheCount.With(prometheus.Labels{"option": "query", "status": "fail", "fqdn": record.fqdn, "qtype": record.qType}).Inc()
+		// TODO degrade_cache{option='query', status='fail', fqdn='record.fqdn', qtype='record.qType'}
+	} else {
+		degradeCacheCount.With(prometheus.Labels{"option": "query", "status": "success", "fqdn": record.fqdn, "qtype": record.qType}).Inc()
+		// TODO degrade_cache{option='query', status='success', fqdn='record.fqdn', qtype='record.qType'}
+	}
 	return dnsRecordInfo.response, ok
+}
+
+func (m *Mysql) degradeWrite(record record, dnsRecordInfo dnsRecordInfo) {
+	m.degradeCache[record] = dnsRecordInfo
 }
 
 func (m *Mysql) getRecords(domainID int, host, zone, qtype string) ([]record, error) {
 	var records []record
 
-	rows := m.DB.QueryRow(recordQuerySQL, domainID, host, qtype)
+	rows := m.DB.QueryRow(m.queryRecordSQL, domainID, host, qtype)
 
 	for {
 		var record record
 		err := rows.Scan(&record.id, &record.zoneID, &record.name, &record.qType, &record.data, &record.ttl)
 		if err == sql.ErrNoRows {
+			// TODO query_db{status='success'}
 			return records, nil
 		}
 		if err != nil {
+			// TODO query_db{status='fail'}
 			return nil, err
 		}
 		record.zoneName = zone
 		logger.Debugf("record %#v", record)
 		records = append(records, record)
 	}
+}
 
+func (m *Mysql) makeAnswer(rrString string) (dns.RR, error) {
+	rr, err := dns.NewRR(rrString)
+	if err != nil {
+		// TODO make_answer{status='fail'}
+		logger.Errorf("Failed to create DNS record: %s", err)
+	}
+	// TODO make_answer{status='success'}
+	return rr, nil
 }

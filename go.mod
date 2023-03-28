@@ -7,6 +7,7 @@ require (
 	github.com/coredns/coredns v1.10.1
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/miekg/dns v1.1.52
+	github.com/prometheus/client_golang v1.14.0
 )
 
 require (
@@ -18,7 +19,6 @@ require (
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.39.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect

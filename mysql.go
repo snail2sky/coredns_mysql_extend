@@ -66,9 +66,8 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 			rrString := fmt.Sprintf("%s %d IN %s %s", qName, cnameRecord.ttl, cnameRecord.qType, cnameRecord.data)
 			rrStrings = append(rrStrings, rrString)
-			rr, err := dns.NewRR(rrString)
+			rr, err := m.makeAnswer(rrString)
 			if err != nil {
-				logger.Errorf("Failed to create DNS record: %s", err)
 				continue
 			}
 			answers = append(answers, rr)
@@ -84,9 +83,8 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 			for _, cname2Record := range cname2Records {
 				rrString := fmt.Sprintf("%s %d IN %s %s", cname2Record.name+zoneSeparator+cname2Record.zoneName, cname2Record.ttl, cname2Record.qType, cname2Record.data)
 				rrStrings = append(rrStrings, rrString)
-				rr, err := dns.NewRR(rrString)
+				rr, err := m.makeAnswer(rrString)
 				if err != nil {
-					logger.Errorf("Failed to create DNS record: %s", err)
 					continue
 				}
 				answers = append(answers, rr)
@@ -123,10 +121,9 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 		for _, record := range records {
 			rrString := fmt.Sprintf("%s %d IN %s %s", wildcardName, record.ttl, record.qType, record.data)
-			rr, err := dns.NewRR(rrString)
+			rr, err := m.makeAnswer(rrString)
 			rrStrings = append(rrStrings, rrString)
 			if err != nil {
-				logger.Errorf("Failed to create DNS record: %s", err)
 				continue
 			}
 			answers = append(answers, rr)
@@ -139,12 +136,14 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		w.WriteMsg(msg)
 		// DegradeEntrypoint cache
 		dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: answers}
-		if cacheDnsRecordInfo, ok := m.degradeCache[degradeRecord]; !ok || !reflect.DeepEqual(cacheDnsRecordInfo, dnsRecordInfo) {
-			m.degradeCache[degradeRecord] = dnsRecordInfo
+		if cacheDnsRecordInfo, ok := m.degradeQuery(degradeRecord); !ok || !reflect.DeepEqual(cacheDnsRecordInfo, dnsRecordInfo) {
+			m.degradeWrite(degradeRecord, dnsRecordInfo)
 			logger.Debugf("Add degrade record %#v, dnsRecordInfo %#v", degradeRecord, dnsRecordInfo)
+			// TODO degrade_cache{option='update', status='success', fqdn='degradeRecord.fqdn', qtype='degradeRecord.qType'}
 			return dns.RcodeSuccess, nil
 		}
-
+		// TODO degrade_cache{option='null', status='success', fqdn='degradeRecord.fqdn', qtype='degradeRecord.qType'}
+		return dns.RcodeSuccess, nil
 	}
 
 	// DegradeEntrypoint
@@ -153,10 +152,10 @@ DegradeEntrypoint:
 		msg := MakeMessage(r, answers)
 		w.WriteMsg(msg)
 		logger.Debugf("Add degrade record %#v", degradeRecord)
-
 		return dns.RcodeSuccess, nil
 	}
 	logger.Debug("Call next plugin")
+	// TODO call_next_plugin{fqdn='qName', qtype='qType'}
 	return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 }
 

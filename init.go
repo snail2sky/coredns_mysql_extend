@@ -1,20 +1,27 @@
 package coredns_mysql_extend
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/coredns/caddy"
-)
-
-var (
-	zoneQuerySQL   string
-	recordQuerySQL string
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (m *Mysql) Name() string {
 	return pluginName
 }
+
+func registMatrics() {
+	prometheus.MustRegister(openMysqlCount)
+	prometheus.MustRegister(createTableCount)
+	prometheus.MustRegister(degradeCacheCount)
+	prometheus.MustRegister(zoneFindCount)
+	prometheus.MustRegister(queryDBCount)
+	prometheus.MustRegister(makeAnswerCount)
+}
+
 func (m *Mysql) parseConfig(c *caddy.Controller) error {
 	mysqlConfig := mysqlConfig{
 		dsn:          defaultDSN,
@@ -30,6 +37,8 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 
 		failHeartbeatTime:    defaultFailHeartBeatTime,
 		successHeartbeatTime: defaultSuccessHeartBeatTime,
+		queryZoneSQL:         defaultQueryZoneSQL,
+		queryRecordSQL:       defaultQueryRecordSQL,
 	}
 
 	m.mysqlConfig = mysqlConfig
@@ -112,15 +121,21 @@ func (m *Mysql) parseConfig(c *caddy.Controller) error {
 				} else {
 					m.successHeartbeatTime = userSuccessHeartBeatTime
 				}
+			case "query_zone_sql":
+				m.queryZoneSQL = c.Val()
+			case "query_record_sql":
+				m.queryRecordSQL = c.Val()
 			default:
 				return c.Errf("unknown property '%s'", c.Val())
 			}
 		}
+		m.queryZoneSQL = fmt.Sprintf(m.queryZoneSQL, m.zonesTable)
+		m.queryRecordSQL = fmt.Sprintf(m.queryRecordSQL, m.recordsTable)
 	}
 	return nil
 }
 
-func (m *Mysql) createTables() error {
+func (m *Mysql) createTables() {
 	_, err := m.DB.Exec(`
         CREATE TABLE IF NOT EXISTS ` + m.zonesTable + ` (
             id INT NOT NULL AUTO_INCREMENT,
@@ -130,8 +145,8 @@ func (m *Mysql) createTables() error {
         );
     `)
 	if err != nil {
+		// TODO create_table{status='fail', table_name=''}
 		logger.Error(err)
-		return err
 	}
 
 	_, err = m.DB.Exec(`
@@ -148,9 +163,7 @@ func (m *Mysql) createTables() error {
         );
     `)
 	if err != nil {
+		// TODO create_table{status='fail', table_name=''}
 		logger.Error(err)
-		return err
 	}
-
-	return nil
 }
