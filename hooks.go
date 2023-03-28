@@ -81,7 +81,7 @@ func (m *Mysql) reLoadLocalData() {
 		}
 		// TODO add lock
 		m.degradeCache = tmpCache
-		logger.Debug("Load degrade data from local file")
+		logger.Debugf("Load degrade data from local file %#v", tmpCache)
 		time.Sleep(m.successHeartbeatTime)
 	}
 }
