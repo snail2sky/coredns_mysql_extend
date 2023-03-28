@@ -23,8 +23,9 @@ func (m *Mysql) rePing() {
 }
 
 func (m *Mysql) reGetZone() {
-	zoneMap := make(map[string]int, 0)
 	for {
+		zoneMap := make(map[string]int, 0)
+
 		rows, err := m.DB.Query(m.queryZoneSQL)
 		if err != nil {
 			time.Sleep(m.failHeartbeatTime)
