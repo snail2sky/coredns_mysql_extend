@@ -20,9 +20,13 @@ func setup(c *caddy.Controller) error {
 	mysql := MakeMysqlPlugin()
 
 	// Parse configuration
-	mysql.parseConfig(c)
+	err := mysql.parseConfig(c)
+	if err != nil {
+		logger.Fatalf("Parse configuration err: %s", err)
+	}
 	mysql.queryZoneSQL = fmt.Sprintf(mysql.queryZoneSQL, mysql.zonesTable)
 	mysql.queryRecordSQL = fmt.Sprintf(mysql.queryRecordSQL, mysql.recordsTable)
+
 	logger.Debugf("Query zone SQL: %s", mysql.queryZoneSQL)
 	logger.Debugf("Query record SQL: %s", mysql.queryRecordSQL)
 
