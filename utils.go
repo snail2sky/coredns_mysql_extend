@@ -94,7 +94,6 @@ func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, erro
 		}
 		record.zoneName = zone
 		record.fqdn = record.name + zoneSeparator + record.zoneName
-		logger.Debugf("record %#v", record)
 		records = append(records, record)
 	}
 }

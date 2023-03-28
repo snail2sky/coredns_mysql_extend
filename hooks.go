@@ -49,6 +49,7 @@ func (m *Mysql) reGetZone() {
 
 func (m *Mysql) reLoadLocalData() {
 	tmpCache := make(map[record]dnsRecordInfo, 0)
+	m.degradeCache = tmpCache
 	for {
 		pureRecords := make([]pureRecord, 0)
 		content, err := os.ReadFile(m.dumpFile)
