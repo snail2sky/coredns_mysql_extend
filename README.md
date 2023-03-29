@@ -41,12 +41,6 @@ go generate
 go build
 ```
 
-Or you can instead use make:
-
-``` sh
-make
-```
-
 ## Syntax
 
 ~~~ txt
