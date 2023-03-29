@@ -119,6 +119,15 @@ internal.:53 {
     success_reload_local_data_time 120s
   }
 }
+
+internal.:53 {
+  cache
+  mysql {
+    dsn db_reader:qwer123@tcp(10.0.0.1:3306)/dns
+    dump_file dns.json
+    success_reload_local_data_time 120s
+  }
+}
 ~~~
 
 ~~~ sql
