@@ -86,6 +86,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// Process records
 	for _, record := range records {
 		rrString := fmt.Sprintf("%s %d IN %s %s", record.fqdn, record.ttl, record.qType, record.data)
+		rrStrings = append(rrStrings, rrString)
 		rr, err := m.makeAnswer(rrString)
 		if err != nil {
 			continue
