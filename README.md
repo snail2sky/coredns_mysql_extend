@@ -2,7 +2,7 @@
 
 ## Name
 
-*mysql_extend* - Use mysql as backend to store dns records.
+*mysql_extend* - Use mysql as backend to store dns records. English - [中文](./README_zh.md)
 
 ## Description
 
@@ -32,7 +32,7 @@ A simple way to consume this plugin, is by adding the following on [plugin.cfg](
 mysql:github.com/snail2sky/coredns_mysql_extend
 ~~~
 
-Put this early in the plugin list, so that *example* is executed before any of the other plugins.
+Put this early in the plugin list, so that *mysql_extend* is executed before any of the other plugins.
 
 After this you can compile coredns by:
 
@@ -84,7 +84,7 @@ mysql {
 
 ## Metrics
 
-If monitoring is enabled (via the *prometheus* directive) the following metric is exported:
+In this configuration, we use this plugin to process all domain name queries ending with internal, and use the cache plugin to improve efficiency
 
 * `open_mysql_total{status}` - Counter of open mysql instance.
 * `create_table_total{status, table_name}` - Counter of create table.
