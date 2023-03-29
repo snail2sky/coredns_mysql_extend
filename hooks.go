@@ -36,10 +36,10 @@ func (m *Mysql) reGetZone() {
 		zoneMap := make(map[string]int, 0)
 		rows, err := m.db.Query(m.queryZoneSQL)
 		if err != nil {
-			time.Sleep(m.failHeartbeatTime)
-
 			logger.Errorf("Failed to query zones: %s", err)
 			dbGetZoneCount.With(prometheus.Labels{"status": "fail"}).Inc()
+
+			time.Sleep(m.failHeartbeatTime)
 			continue
 		}
 
@@ -51,11 +51,11 @@ func (m *Mysql) reGetZone() {
 			}
 			zoneMap[zoneRecord.name] = zoneRecord.id
 		}
-		time.Sleep(m.successHeartbeatTime)
-
 		m.zoneMap = zoneMap
 		logger.Debugf("Success to query zones: %#v", zoneMap)
 		dbGetZoneCount.With(prometheus.Labels{"status": "success"}).Inc()
+
+		time.Sleep(m.successHeartbeatTime)
 	}
 }
 
@@ -66,19 +66,17 @@ func (m *Mysql) reLoadLocalData() {
 		pureRecords := make([]pureRecord, 0)
 		content, err := os.ReadFile(m.dumpFile)
 		if err != nil {
-			time.Sleep(m.failReloadLocalDataTime)
-
 			logger.Errorf("Failed to load data from file: %s", err)
 			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
-			return
+
+			time.Sleep(m.failReloadLocalDataTime)
 		}
 		err = json.Unmarshal(content, &pureRecords)
 		if err != nil {
-			time.Sleep(m.failReloadLocalDataTime)
-
 			logger.Errorf("Failed to load data from file: %s", err)
 			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
-			return
+
+			time.Sleep(m.failReloadLocalDataTime)
 		}
 
 		for _, rMap := range pureRecords {
@@ -99,11 +97,11 @@ func (m *Mysql) reLoadLocalData() {
 			}
 		}
 		// TODO add lock
-		time.Sleep(m.successReloadLocalDataTime)
-
 		m.degradeCache = tmpCache
 		logger.Debugf("Load degrade data from local file %#v", tmpCache)
 		loadLocalData.With(prometheus.Labels{"status": "success"}).Inc()
+
+		time.Sleep(m.successReloadLocalDataTime)
 	}
 }
 
