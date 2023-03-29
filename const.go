@@ -3,18 +3,18 @@ package coredns_mysql_extend
 import "time"
 
 const (
-	defaultDSN                        = "root:qwer1234@tcp(127.0.0.1:3306)/dns"
-	defaultDumpFile                   = "dump.json"
-	defaultTTL                        = 120
+	defaultDSN                        = "username:password@tcp(127.0.0.1:3306)/dns"
+	defaultDumpFile                   = "dump_dns.json"
+	defaultTTL                        = 360
 	defaultZonesTable                 = "zones"
 	defaultRecordsTable               = "records"
 	defaultMaxIdleConns               = 4
 	defaultMaxOpenConns               = 8
 	defaultConnMaxIdleTime            = time.Hour * 1
 	defaultConnMaxLifeTime            = time.Hour * 24
-	defaultFailHeartBeatTime          = time.Second * 5
+	defaultFailHeartBeatTime          = time.Second * 10
 	defaultSuccessHeartBeatTime       = time.Second * 60
-	defaultFailReloadLocalDataTime    = time.Second * 5
+	defaultFailReloadLocalDataTime    = time.Second * 10
 	defaultSuccessReloadLocalDataTime = time.Second * 60
 
 	defaultQueryZoneSQL   = "SELECT id, zone_name FROM %s"
@@ -28,6 +28,7 @@ const (
 	zoneSeparator = "."
 	wildcard      = "*"
 	zoneSelf      = "@"
+	soaQtype      = "SOA"
 	cnameQtype    = "CNAME"
 	pluginName    = "mysql"
 )

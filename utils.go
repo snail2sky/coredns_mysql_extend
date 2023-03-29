@@ -94,7 +94,11 @@ func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, erro
 			return nil, err
 		}
 		record.zoneName = zone
-		record.fqdn = record.name + zoneSeparator + record.zoneName
+		if qType == soaQtype {
+			record.fqdn = record.zoneName
+		} else {
+			record.fqdn = record.name + zoneSeparator + record.zoneName
+		}
 		records = append(records, record)
 	}
 }
