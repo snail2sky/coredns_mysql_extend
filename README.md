@@ -66,21 +66,21 @@ mysql {
 
 ## Configuration
 
-- `dsn` <DSN>: Connect mysql url, detail to see https://github.com/go-sql-driver/mysql#dsn-data-source-name. Default value is username:password@tcp(127.0.0.1:3306)/dns
-- `dump_file` <FILE_PATH_STRING>: Use this file to dump and load data, if database error, this feature will be very effective. Default value is dump_dns.json
-- `ttl` <TTL_INT>: If query ttl value from database less equal 0, this value will be used. Default value is 360
-- `zones_table` <TABLE_NAME_STRING>: Query database to get all zones, and these zones will be cached to improve efficiency. Default value is zones
-- `records_table` <TABLE_NAME_STRING>: Query database to get records. Default value is records
-- `db_max_idle_conns` <INT>: Set db connection pool param. Default value is 4
-- `db_max_open_conns` <INT>: Set db connection pool param. Default value is 8
-- `db_conn_max_idle_time` <TIME_DURATION>: Set db connection pool param. Default value is 1h
-- `db_conn_max_life_time` <TIME_DURATION>: Set db connection pool param. Default value is 24h
-- `fail_heartbeat_time` <TIME_DURATION>: Re get zone or re ping DB fail interval. Default value is 10s
-- `success_heartbeat_time` <TIME_DURATION>: Re get zone or re ping DB success interval. Default value is 60s
-- `fail_reload_local_data_time` <TIME_DURATION>: Re load data from local file fail interval. Default value is 10s
-- `success_reload_local_data_time` <TIME_DURATION>: Re load data from local file success interval. Default value is  60s
-- `query_zone_sql` <SQL_FORMAT>: Set query database sql, if you want to optimize sql. Default value is "SELECT id, zone_name FROM %s"
-- `query_record_sql` <SQL_FORMAT>: Set query database sql, if you want to optimize sql. Default value is "SELECT id, zone_id, hostname, type, data, ttl FROM  %s WHERE online!=0 and zone_id=? and hostname=? and type=?"
+- `dsn` <DSN>: Connect mysql url, detail to see https://github.com/go-sql-driver/mysql#dsn-data-source-name. Default value is `username:password@tcp(127.0.0.1:3306)/dns`
+- `dump_file` <FILE_PATH_STRING>: Use this file to dump and load data, if database error, this feature will be very effective. Default value is `dump_dns.json`
+- `ttl` <TTL_INT>: If query ttl value from database less equal 0, this value will be used. Default value is `360`
+- `zones_table` <TABLE_NAME_STRING>: Query database to get all zones, and these zones will be cached to improve efficiency. Default value is `zones`
+- `records_table` <TABLE_NAME_STRING>: Query database to get records. Default value is `records`
+- `db_max_idle_conns` <INT>: Set db connection pool param. Default value is `4`
+- `db_max_open_conns` <INT>: Set db connection pool param. Default value is `8`
+- `db_conn_max_idle_time` <TIME_DURATION>: Set db connection pool param. Default value is `1h`
+- `db_conn_max_life_time` <TIME_DURATION>: Set db connection pool param. Default value is `24h`
+- `fail_heartbeat_time` <TIME_DURATION>: Re get zone or re ping DB fail interval. Default value is `10s`
+- `success_heartbeat_time` <TIME_DURATION>: Re get zone or re ping DB success interval. Default value is `60s`
+- `fail_reload_local_data_time` <TIME_DURATION>: Re load data from local file fail interval. Default value is `10s`
+- `success_reload_local_data_time` <TIME_DURATION>: Re load data from local file success interval. Default value is  `60s`
+- `query_zone_sql` <SQL_FORMAT>: Set query database sql, if you want to optimize sql. Default value is `"SELECT id, zone_name FROM %s"`
+- `query_record_sql` <SQL_FORMAT>: Set query database sql, if you want to optimize sql. Default value is `"SELECT id, zone_id, hostname, type, data, ttl FROM  %s WHERE online!=0 and zone_id=? and hostname=? and type=?"`
 
 ## Metrics
 
