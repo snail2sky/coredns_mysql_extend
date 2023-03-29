@@ -64,6 +64,25 @@ mysql {
 }
 ~~~
 
+## Configuration
+~~~ txt
+dsn <DSN>: Connect mysql url, detail to see https://github.com/go-sql-driver/mysql#dsn-data-source-name
+dump_file <FILE_PATH_STRING>: Use this file to dump and load data, if database error, this feature will be very effective
+ttl <TTL_INT>: If query ttl value from database less equal 0, this value will be used
+zones_table <TABLE_NAME_STRING>: Query database to get all zones, and these zones will be cached to improve efficiency
+records_table <TABLE_NAME_STRING>: Query database to get records
+db_max_idle_conns <INT>: Set db connection pool param
+db_max_open_conns <INT>: Set db connection pool param
+db_conn_max_idle_time <TIME_DURATION>: Set db connection pool param
+db_conn_max_life_time <TIME_DURATION>: Set db connection pool param
+fail_heartbeat_time <TIME_DURATION>: Re get zone or re ping DB fail interval
+success_heartbeat_time <TIME_DURATION>: Re get zone or re ping DB success interval
+fail_reload_local_data_time <TIME_DURATION>: Re load data from local file fail interval
+success_reload_local_data_time <TIME_DURATION>: Re load data from local file success interval
+query_zone_sql <SQL_FORMAT>: Set query database sql, if you want to optimize sql
+query_record_sql <SQL_FORMAT>: Set query database sql, if you want to optimize sql
+~~~
+
 ## Metrics
 
 If monitoring is enabled (via the *prometheus* directive) the following metric is exported:
@@ -142,7 +161,7 @@ INSERT INTO records (zone_id, hostname, type, data, ttl, online) VALUES
 ~~~
 
 test
-~~~bash
+~~~ bash
 dig @127.0.0.1 internal SOA
 dig @127.0.0.1 internal NS
 dig @127.0.0.1 ns1.internal A
