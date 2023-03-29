@@ -29,6 +29,6 @@ func (m *Mysql) dump2LocalData() {
 		dumpLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
 		return
 	}
-	logger.Debug("Failed to dump data to local")
+	logger.Debugf("Success to dump data to local: %#v", pureRecord)
 	dumpLocalData.With(prometheus.Labels{"status": "success"}).Inc()
 }
