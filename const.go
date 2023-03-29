@@ -29,6 +29,7 @@ const (
 	wildcard      = "*"
 	zoneSelf      = "@"
 	soaQtype      = "SOA"
+	nsQtype       = "NS"
 	cnameQtype    = "CNAME"
 	pluginName    = "mysql"
 )

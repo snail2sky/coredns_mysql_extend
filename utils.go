@@ -94,7 +94,7 @@ func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, erro
 			return nil, err
 		}
 		record.zoneName = zone
-		if qType == soaQtype {
+		if qType == soaQtype || qType == nsQtype {
 			record.fqdn = record.zoneName
 		} else {
 			record.fqdn = record.name + zoneSeparator + record.zoneName
