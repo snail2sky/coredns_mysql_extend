@@ -124,7 +124,7 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		msg := MakeMessage(r, answers)
 		w.WriteMsg(msg)
 		dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: answers}
-		if cacheDnsRecordInfo, ok := m.degradeQuery(degradeRecord); !ok || !reflect.DeepEqual(cacheDnsRecordInfo, dnsRecordInfo.response) {
+		if cacheDnsRecordInfo, ok := m.degradeQuery(degradeRecord); !ok && len(rrStrings) != zero || !reflect.DeepEqual(cacheDnsRecordInfo, dnsRecordInfo.response) {
 			m.degradeWrite(degradeRecord, dnsRecordInfo)
 			logger.Debugf("CommonEntrypoint Add degrade record %#v, dnsRecordInfo %#v", degradeRecord, dnsRecordInfo)
 			degradeCacheCount.With(prometheus.Labels{"status": "success", "option": "update", "fqdn": degradeRecord.fqdn, "qtype": degradeRecord.qType}).Inc()
