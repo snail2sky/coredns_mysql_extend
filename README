@@ -133,13 +133,31 @@ CREATE TABLE IF NOT EXISTS records (
 -- Here are some test data
 -- First insert new zone
 INSERT INTO zones (zone_name) VALUES ('internal.');
+INSERT INTO zones (zone_name) VALUES ('in-addr.arpa.');
+
 -- Second insert records
 INSERT INTO records (zone_id, hostname, type, data, ttl, online) VALUES 
-(1, '@', 'SOA', 'ns1.internal. root.internal. 1 3600 300 86400 300', 3600, 1),
-(1, '@', 'NS', 'ns1.internal.', 3600, 1),
-(1, 'ns1', 'A', '127.0.0.1', 3600, 1),
-(1, 'www', 'A', '172.16.0.100', 120, 1);
+    (1, '@', 'SOA', 'ns1.internal. root.internal. 1 3600 300 86400 300', 3600, 1),
+    (1, '@', 'NS', 'ns1.internal.', 3600, 1),
+    (1, 'ns1', 'A', '127.0.0.1', 3600, 1),
+    (1, 'ns1', 'AAAA', '::1', 3600, 1),
+    (1, 'www', 'A', '172.16.0.100', 120, 1),
+    (1, 'web', 'CNAME', 'www.internal.', 60, 1)
+    (2, '100.0.16.172', 'PTR', 'www.internal.', 120, 1);
 
+~~~
+
+test
+~~~bash
+dig @127.0.0.1 internal SOA
+dig @127.0.0.1 internal NS
+dig @127.0.0.1 ns1.internal A
+dig @127.0.0.1 ns1.internal AAAA
+dig @127.0.0.1 www.internal A
+dig @127.0.0.1 web.internal CNAME
+# Support CNAME to A record query
+dig @127.0.0.1 web.internal A
+dig @127.0.0.1 -x 172.16.0.100
 
 ~~~
 
