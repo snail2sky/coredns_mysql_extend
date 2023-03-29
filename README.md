@@ -107,8 +107,7 @@ The `qtype` label indicated which dns query of type.
 
 ## Examples
 
-In this configuration, we forward all queries to 9.9.9.9 and print "example" whenever we receive
-a query.
+In this configuration, we use this plugin to process all domain name queries ending with internal, and use the cache plugin to improve efficiency
 
 ~~~ corefile
 internal.:53 {
@@ -120,7 +119,7 @@ internal.:53 {
   }
 }
 
-internal.:53 {
+in-addr.arpa.:53 {
   cache
   mysql {
     dsn db_reader:qwer123@tcp(10.0.0.1:3306)/dns
