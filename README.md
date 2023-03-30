@@ -108,7 +108,7 @@ The `qtype` label indicated which dns query of type.
 ## Examples
 
 In this configuration, we use this plugin to process all domain name queries ending with internal, and use the cache plugin to improve efficiency
-
+Suggestion: put the area that needs to be queried into the same mysql plugin, otherwise you need to change the value specified by dump_file to prevent data inconsistency caused by repeated writing of a file
 ~~~ corefile
 internal.:53 in-addr.arpa.:53 {
   cache
