@@ -110,16 +110,7 @@ The `qtype` label indicated which dns query of type.
 In this configuration, we use this plugin to process all domain name queries ending with internal, and use the cache plugin to improve efficiency
 
 ~~~ corefile
-internal.:53 {
-  cache
-  mysql {
-    dsn db_reader:qwer123@tcp(10.0.0.1:3306)/dns
-    dump_file dns.json
-    success_reload_local_data_time 120s
-  }
-}
-
-in-addr.arpa.:53 {
+internal.:53 in-addr.arpa.:53 {
   cache
   mysql {
     dsn db_reader:qwer123@tcp(10.0.0.1:3306)/dns

@@ -110,16 +110,7 @@ mysql {
 
 在此配置中, 我们将所有查询 以 internal 结尾的域名查询使用 本插件处理, 并用cache 插件以提高效率
 ~~~ corefile
-internal.:53 {
-  cache
-  mysql {
-    dsn db_reader:qwer123@tcp(10.0.0.1:3306)/dns
-    dump_file dns.json
-    success_reload_local_data_time 120s
-  }
-}
-
-in-addr.arpa.:53 {
+internal.:53 in-addr.arpa.:53 {
   cache
   mysql {
     dsn db_reader:qwer123@tcp(10.0.0.1:3306)/dns
