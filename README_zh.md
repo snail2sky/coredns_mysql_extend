@@ -108,8 +108,8 @@ mysql {
 
 ## Examples
 
-在此配置中, 我们将所有查询 以 internal 结尾的域名查询使用 本插件处理, 并用cache 插件以提高效率
-建议: 将需要被查询的区域放到同一个 mysql 插件中, 否则需要更改dump_file指定的值, 防止对一个文件重复写导致数据不一致
+- 在此配置中, 我们将所有查询 以 internal 结尾的域名查询使用 本插件处理, 并用cache 插件以提高效率
+- 建议: 将需要被查询的区域放到同一个 mysql 插件中, 否则需要更改dump_file指定的值, 防止对一个文件重复写导致数据不一致
 ~~~ corefile
 internal.:53 in-addr.arpa.:53 {
   cache
