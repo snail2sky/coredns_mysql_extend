@@ -59,90 +59,50 @@ func (m *Mysql) reGetZone() {
 	}
 }
 
-// func (m *Mysql) reLoadLocalData() {
-// 	tmpCache := make(map[record]dnsRecordInfo, 0)
-// 	m.degradeCache = tmpCache
-// 	for {
-// 		pureRecords := make([]pureRecord, 0)
-// 		content, err := os.ReadFile(m.dumpFile)
-// 		if err != nil {
-// 			logger.Errorf("Failed to load data from file: %s", err)
-// 			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
-
-// 			time.Sleep(m.failReloadLocalDataTime)
-// 		}
-// 		err = json.Unmarshal(content, &pureRecords)
-// 		if err != nil {
-// 			logger.Errorf("Failed to load data from file: %s", err)
-// 			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
-
-// 			time.Sleep(m.failReloadLocalDataTime)
-// 		}
-
-// 		for _, rMap := range pureRecords {
-// 			for queryKey, rrStrings := range rMap {
-// 				var response []dns.RR
-// 				queryKeySlice := strings.Split(queryKey, keySeparator)
-// 				fqdn, qType := queryKeySlice[0], queryKeySlice[1]
-// 				record := record{fqdn: fqdn, qType: qType}
-// 				for _, rrString := range rrStrings {
-// 					rr, err := dns.NewRR(rrString)
-// 					if err != nil {
-// 						continue
-// 					}
-// 					response = append(response, rr)
-// 				}
-// 				dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: response}
-// 				tmpCache[record] = dnsRecordInfo
-// 			}
-// 		}
-// 		// TODO add lock
-// 		m.degradeCache = tmpCache
-// 		logger.Debugf("Load degrade data from local file %#v", tmpCache)
-// 		loadLocalData.With(prometheus.Labels{"status": "success"}).Inc()
-
-// 		time.Sleep(m.successReloadLocalDataTime)
-// 	}
-// }
-
-func (m *Mysql) loadLocalData() {
+func (m *Mysql) reLoadLocalData() {
 	tmpCache := make(map[record]dnsRecordInfo, 0)
 	m.degradeCache = tmpCache
-	pureRecords := make([]pureRecord, 0)
-	content, err := os.ReadFile(m.dumpFile)
-	if err != nil {
-		logger.Errorf("Failed to load data from file: %s", err)
-		loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
-		return
-	}
-	err = json.Unmarshal(content, &pureRecords)
-	if err != nil {
-		logger.Errorf("Failed to load data from file: %s", err)
-		loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
-		return
-	}
+	for {
+		pureRecords := make([]pureRecord, 0)
+		content, err := os.ReadFile(m.dumpFile)
+		if err != nil {
+			logger.Errorf("Failed to load data from file: %s", err)
+			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
 
-	for _, rMap := range pureRecords {
-		for queryKey, rrStrings := range rMap {
-			var response []dns.RR
-			queryKeySlice := strings.Split(queryKey, keySeparator)
-			fqdn, qType := queryKeySlice[0], queryKeySlice[1]
-			record := record{fqdn: fqdn, qType: qType}
-			for _, rrString := range rrStrings {
-				rr, err := dns.NewRR(rrString)
-				if err != nil {
-					continue
-				}
-				response = append(response, rr)
-			}
-			dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: response}
-			tmpCache[record] = dnsRecordInfo
+			time.Sleep(m.failReloadLocalDataTime)
 		}
+		err = json.Unmarshal(content, &pureRecords)
+		if err != nil {
+			logger.Errorf("Failed to load data from file: %s", err)
+			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
+
+			time.Sleep(m.failReloadLocalDataTime)
+		}
+
+		for _, rMap := range pureRecords {
+			for queryKey, rrStrings := range rMap {
+				var response []dns.RR
+				queryKeySlice := strings.Split(queryKey, keySeparator)
+				fqdn, qType := queryKeySlice[0], queryKeySlice[1]
+				record := record{fqdn: fqdn, qType: qType}
+				for _, rrString := range rrStrings {
+					rr, err := dns.NewRR(rrString)
+					if err != nil {
+						continue
+					}
+					response = append(response, rr)
+				}
+				dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: response}
+				tmpCache[record] = dnsRecordInfo
+			}
+		}
+		// TODO add lock
+		m.degradeCache = tmpCache
+		logger.Debugf("Load degrade data from local file %#v", tmpCache)
+		loadLocalData.With(prometheus.Labels{"status": "success"}).Inc()
+
+		time.Sleep(m.successReloadLocalDataTime)
 	}
-	// TODO add lock
-	m.degradeCache = tmpCache
-	logger.Debugf("Load degrade data from local file %#v", tmpCache)
-	loadLocalData.With(prometheus.Labels{"status": "success"}).Inc()
 }
 
 func (m *Mysql) openDB() (*sql.DB, error) {
@@ -175,7 +135,7 @@ func (m *Mysql) onStartup() error {
 	go m.reGetZone()
 	// start reLoad local file data loop
 	// go m.reLoadLocalData()
-	m.loadLocalData()
+	go m.reLoadLocalData()
 
 	m.createTables()
 	return nil
