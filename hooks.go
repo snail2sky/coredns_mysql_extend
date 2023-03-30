@@ -3,6 +3,7 @@ package coredns_mysql_extend
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -60,49 +61,83 @@ func (m *Mysql) reGetZone() {
 }
 
 func (m *Mysql) reLoadLocalData() {
-	tmpCache := make(map[record]dnsRecordInfo, 0)
-	m.degradeCache = tmpCache
+	emptyCache := make(map[record]dnsRecordInfo, zero)
+	m.degradeCache = emptyCache
 	for {
-		pureRecords := make([]pureRecord, 0)
-		content, err := os.ReadFile(m.dumpFile)
+		cache, err := m.loadLocalData(emptyCache)
 		if err != nil {
-			logger.Errorf("Failed to load data from file: %s", err)
-			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
-
 			time.Sleep(m.failReloadLocalDataTime)
+		} else {
+			time.Sleep(m.successReloadLocalDataTime)
 		}
-		err = json.Unmarshal(content, &pureRecords)
-		if err != nil {
-			logger.Errorf("Failed to load data from file: %s", err)
-			loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
-
-			time.Sleep(m.failReloadLocalDataTime)
-		}
-
-		for _, rMap := range pureRecords {
-			for queryKey, rrStrings := range rMap {
-				var response []dns.RR
-				queryKeySlice := strings.Split(queryKey, keySeparator)
-				fqdn, qType := queryKeySlice[0], queryKeySlice[1]
-				record := record{fqdn: fqdn, qType: qType}
-				for _, rrString := range rrStrings {
-					rr, err := dns.NewRR(rrString)
-					if err != nil {
-						continue
-					}
-					response = append(response, rr)
-				}
-				dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: response}
-				tmpCache[record] = dnsRecordInfo
-			}
-		}
-		// TODO add lock
-		m.degradeCache = tmpCache
-		logger.Debugf("Load degrade data from local file %#v", tmpCache)
-		loadLocalData.With(prometheus.Labels{"status": "success"}).Inc()
-
-		time.Sleep(m.successReloadLocalDataTime)
+		m.degradeCache = cache
 	}
+}
+
+func (m *Mysql) loadLocalData(cache map[record]dnsRecordInfo) (map[record]dnsRecordInfo, error) {
+	pureRecords := make([]pureRecord, zero)
+	content, err := os.ReadFile(m.dumpFile)
+	if err != nil {
+		logger.Errorf("Failed to load data from file: %s", err)
+		loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
+
+		return cache, err
+	}
+	err = json.Unmarshal(content, &pureRecords)
+	if err != nil {
+		logger.Errorf("Failed to load data from file: %s", err)
+		loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
+
+		return cache, err
+	}
+
+	for _, rMap := range pureRecords {
+		for queryKey, rrStrings := range rMap {
+			var response []dns.RR
+			queryKeySlice := strings.Split(queryKey, keySeparator)
+			fqdn, qType := queryKeySlice[0], queryKeySlice[1]
+			record := record{fqdn: fqdn, qType: qType}
+			for _, rrString := range rrStrings {
+				rr, err := dns.NewRR(rrString)
+				if err != nil {
+					continue
+				}
+				response = append(response, rr)
+			}
+			dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: response}
+			cache[record] = dnsRecordInfo
+		}
+	}
+	// TODO add lock
+	logger.Debugf("Load degrade data from local file %#v", cache)
+	loadLocalData.With(prometheus.Labels{"status": "success"}).Inc()
+
+	return cache, err
+}
+
+func (m *Mysql) dump2LocalData() {
+	pureRecord := make([]pureRecord, zero)
+	for record, dnsRecordInfo := range m.degradeCache {
+		logger.Debugf("Record %#v", record)
+		pureRecord = append(pureRecord, map[string][]string{
+			fmt.Sprintf("%s%s%s", record.fqdn, keySeparator, record.qType): dnsRecordInfo.rrStrings,
+		})
+	}
+
+	content, err := json.Marshal(pureRecord)
+	if err != nil {
+		logger.Errorf("Failed to dump data to local: %s", err)
+		dumpLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
+		return
+	}
+	if err := os.WriteFile(m.dumpFile, content, safeMode); err != nil {
+		logger.Error(err)
+		logger.Errorf("Failed to dump data to local: %s", err)
+		dumpLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
+		return
+	}
+	logger.Debugf("Success to dump data to local: %#v", pureRecord)
+	dumpLocalData.With(prometheus.Labels{"status": "success"}).Inc()
 }
 
 func (m *Mysql) openDB() (*sql.DB, error) {
