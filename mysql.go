@@ -141,7 +141,7 @@ DegradeEntrypoint:
 	if answers, ok := m.degradeQuery(degradeRecord); ok {
 		msg := MakeMessage(r, answers)
 		w.WriteMsg(msg)
-		logger.Debugf("DegradeEntrypoint: Add degrade record %#v", degradeRecord)
+		logger.Debugf("DegradeEntrypoint: Query degrade record %#v", degradeRecord)
 		return dns.RcodeSuccess, nil
 	}
 	logger.Debug("Call next plugin")
