@@ -153,7 +153,7 @@ INSERT INTO records (zone_id, hostname, type, data, ttl, online) VALUES
     (1, 'ns1', 'A', '127.0.0.1', 3600, 1),
     (1, 'ns1', 'AAAA', '::1', 3600, 1),
     (1, 'www', 'A', '172.16.0.100', 120, 1),
-    (1, 'web', 'CNAME', 'www.internal.', 60, 1)
+    (1, 'web', 'CNAME', 'www.internal.', 60, 1),
     (2, '100.0.16.172', 'PTR', 'www.internal.', 120, 1);
 
 ~~~

@@ -12,15 +12,6 @@ func (m *Mysql) Name() string {
 	return pluginName
 }
 
-// func registMatrics() {
-// 	prometheus.MustRegister(openMysqlCount)
-// 	prometheus.MustRegister(createTableCount)
-// 	prometheus.MustRegister(degradeCacheCount)
-// 	prometheus.MustRegister(zoneFindCount)
-// 	prometheus.MustRegister(queryDBCount)
-// 	prometheus.MustRegister(makeAnswerCount)
-// }
-
 func (m *Mysql) parseConfig(c *caddy.Controller) error {
 	mysqlConfig := &mysqlConfig{
 		dsn:          defaultDSN,

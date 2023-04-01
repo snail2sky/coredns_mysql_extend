@@ -60,35 +60,23 @@ func (m *Mysql) reGetZone() {
 	}
 }
 
-func (m *Mysql) reLoadLocalData() {
-	emptyCache := make(map[record]dnsRecordInfo, zero)
-	m.degradeCache = emptyCache
-	for {
-		cache, err := m.loadLocalData(emptyCache)
-		if err != nil {
-			time.Sleep(m.failReloadLocalDataTime)
-		} else {
-			time.Sleep(m.successReloadLocalDataTime)
-		}
-		m.degradeCache = cache
-	}
-}
-
-func (m *Mysql) loadLocalData(cache map[record]dnsRecordInfo) (map[record]dnsRecordInfo, error) {
+func (m *Mysql) loadLocalData() {
+	cache := make(map[record]dnsRecordInfo, zero)
+	m.degradeCache = cache
 	pureRecords := make([]pureRecord, zero)
 	content, err := os.ReadFile(m.dumpFile)
 	if err != nil {
 		logger.Errorf("Failed to load data from file: %s", err)
 		loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
 
-		return cache, err
+		return
 	}
 	err = json.Unmarshal(content, &pureRecords)
 	if err != nil {
 		logger.Errorf("Failed to load data from file: %s", err)
 		loadLocalData.With(prometheus.Labels{"status": "fail"}).Inc()
 
-		return cache, err
+		return
 	}
 
 	for _, rMap := range pureRecords {
@@ -111,8 +99,7 @@ func (m *Mysql) loadLocalData(cache map[record]dnsRecordInfo) (map[record]dnsRec
 	// TODO add lock
 	logger.Debugf("Load degrade data from local file %#v", cache)
 	loadLocalData.With(prometheus.Labels{"status": "success"}).Inc()
-
-	return cache, err
+	m.degradeCache = cache
 }
 
 func (m *Mysql) dump2LocalData() {
@@ -168,10 +155,9 @@ func (m *Mysql) onStartup() error {
 	go m.rePing()
 	// start reGetZone loop
 	go m.reGetZone()
-	// start reLoad local file data loop
-	// go m.reLoadLocalData()
-	go m.reLoadLocalData()
-
+	// Load local file data
+	m.loadLocalData()
+	// Create tables
 	m.createTables()
 	return nil
 }

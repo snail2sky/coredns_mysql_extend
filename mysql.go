@@ -121,11 +121,11 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	}
 
 	// Common Entrypoint
-	if len(answers) > 0 {
+	if len(answers) > zero {
 		msg := MakeMessage(r, answers)
 		w.WriteMsg(msg)
 		dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: answers}
-		if cacheDnsRecordInfo, ok := m.degradeQuery(degradeRecord); !ok && len(rrStrings) != zero || !reflect.DeepEqual(cacheDnsRecordInfo, dnsRecordInfo.response) {
+		if cacheDnsRecordResponse, ok := m.degradeQuery(degradeRecord); !ok || !reflect.DeepEqual(cacheDnsRecordResponse, dnsRecordInfo.response) {
 			m.degradeWrite(degradeRecord, dnsRecordInfo)
 			logger.Debugf("CommonEntrypoint Add degrade record %#v, dnsRecordInfo %#v", degradeRecord, dnsRecordInfo)
 			degradeCacheCount.With(prometheus.Labels{"status": "success", "option": "update", "fqdn": degradeRecord.fqdn, "qtype": degradeRecord.qType}).Inc()
@@ -133,6 +133,8 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		}
 		return dns.RcodeSuccess, nil
 	}
+	logger.Debug("Call next plugin")
+	return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 
 	// Degrade Entrypoint
 DegradeEntrypoint:
