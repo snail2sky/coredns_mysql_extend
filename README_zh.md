@@ -78,8 +78,6 @@ mysql {
 - `db_conn_max_life_time` <TIME_DURATION>: 设置db连接池的参数. 默认值为 `24h`
 - `fail_heartbeat_time` <TIME_DURATION>: 获取 zone 和 ping db 失败后 重做的时间间隔. 默认值为 `10s`
 - `success_heartbeat_time` <TIME_DURATION>: 获取 zone 和 ping db 成功后 重做的时间间隔. 默认值为  `60s`
-- `fail_reload_local_data_time` <TIME_DURATION>: 从本地加载数据失败后重做的时间间隔. 默认值为 `10s`
-- `success_reload_local_data_time` <TIME_DURATION>: 从本地加载数据成功后重做的时间间隔. 默认值为  `60s`
 - `query_zone_sql` <SQL_FORMAT>: 设置查询DB的SQL, 如果你想优化sql可以修改此值. 默认值为 `"SELECT id, zone_name FROM %s"`
 - `query_record_sql` <SQL_FORMAT>: 设置查询DB的SQL, 如果你想优化sql可以修改此值. 默认值为 `"SELECT id, zone_id, hostname, type, data, ttl FROM  %s WHERE online!=0 and zone_id=? and hostname=? and type=?"`
 

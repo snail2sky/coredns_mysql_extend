@@ -95,8 +95,6 @@ In this configuration, we use this plugin to process all domain name queries end
 * `make_answer_total{status}` - Counter of make answer count.
 * `db_ping_total{status}` - Counter of DB ping.
 * `db_get_zone_total{status}` - Counter of db get zone.
-* `load_local_data_total{status}` - Counter of load local data.
-* `dump_local_data_total{status}` - Counter of dump local data.
 
 The `status` label indicated which status of this metric option.
 The `table_name` label indicated which option what table.
