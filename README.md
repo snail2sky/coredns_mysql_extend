@@ -29,7 +29,7 @@ The [manual](https://coredns.io/manual/toc/#what-is-coredns) will have more info
 A simple way to consume this plugin, is by adding the following on [plugin.cfg](https://github.com/coredns/coredns/blob/master/plugin.cfg), and recompile it as [detailed on coredns.io](https://coredns.io/2017/07/25/compile-time-enabling-or-disabling-plugins/#build-with-compile-time-configuration-file).
 
 ~~~
-mysql:github.com/snail2sky/coredns_mysql_extend
+mysql_extend:github.com/snail2sky/coredns_mysql_extend
 ~~~
 
 Put this early in the plugin list, so that *mysql_extend* is executed before any of the other plugins.
@@ -44,7 +44,7 @@ go build
 ## Syntax
 
 ~~~ txt
-mysql {
+mysql_extend {
     dsn username:password@tcp(127.0.0.1:3306)/dns
     # The following is the default value, if there is no custom requirement, you can leave it blank
     [dump_file dump_dns.json]
@@ -57,8 +57,6 @@ mysql {
     [db_conn_max_life_time 24h]
     [fail_heartbeat_time 10s]
     [success_heartbeat_time 60s]
-    [fail_reload_local_data_time 10s]
-    [success_reload_local_data_time 60s]
     [query_zone_sql "SELECT id, zone_name FROM %s"]
     [query_record_sql "SELECT id, zone_id, hostname, type, data, ttl FROM  %s WHERE online!=0 and zone_id=? and hostname=? and type=?"]
 }
@@ -77,8 +75,6 @@ mysql {
 - `db_conn_max_life_time` <TIME_DURATION>: Set db connection pool param. Default value is `24h`
 - `fail_heartbeat_time` <TIME_DURATION>: Re get zone or re ping DB fail interval. Default value is `10s`
 - `success_heartbeat_time` <TIME_DURATION>: Re get zone or re ping DB success interval. Default value is `60s`
-- `fail_reload_local_data_time` <TIME_DURATION>: Re load data from local file fail interval. Default value is `10s`
-- `success_reload_local_data_time` <TIME_DURATION>: Re load data from local file success interval. Default value is  `60s`
 - `query_zone_sql` <SQL_FORMAT>: Set query database sql, if you want to optimize sql. Default value is `"SELECT id, zone_name FROM %s"`
 - `query_record_sql` <SQL_FORMAT>: Set query database sql, if you want to optimize sql. Default value is `"SELECT id, zone_id, hostname, type, data, ttl FROM  %s WHERE online!=0 and zone_id=? and hostname=? and type=?"`
 
@@ -110,10 +106,9 @@ The `qtype` label indicated which dns query of type.
 ~~~ corefile
 internal.:53 in-addr.arpa.:53 {
   cache
-  mysql {
+  mysql_extend {
     dsn db_reader:qwer123@tcp(10.0.0.1:3306)/dns
     dump_file dns.json
-    success_reload_local_data_time 120s
   }
 }
 ~~~
