@@ -29,5 +29,5 @@ const (
 	soaQtype      = "SOA"
 	nsQtype       = "NS"
 	cnameQtype    = "CNAME"
-	pluginName    = "mysql_extend"
+	pluginName    = "mysql"
 )
