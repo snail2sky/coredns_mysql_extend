@@ -123,7 +123,10 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	// Common Entrypoint
 	if len(answers) > zero {
 		msg := MakeMessage(r, answers)
-		w.WriteMsg(msg)
+		err = w.WriteMsg(msg)
+		if err != nil {
+			logger.Error(err)
+		}
 		dnsRecordInfo := dnsRecordInfo{rrStrings: rrStrings, response: answers}
 		if cacheDnsRecordResponse, ok := m.degradeQuery(degradeRecord); !ok || !reflect.DeepEqual(cacheDnsRecordResponse, dnsRecordInfo.response) {
 			m.degradeWrite(degradeRecord, dnsRecordInfo)
@@ -140,7 +143,10 @@ func (m *Mysql) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 DegradeEntrypoint:
 	if answers, ok := m.degradeQuery(degradeRecord); ok {
 		msg := MakeMessage(r, answers)
-		w.WriteMsg(msg)
+		err = w.WriteMsg(msg)
+		if err != nil {
+			logger.Error(err)
+		}
 		logger.Debugf("DegradeEntrypoint: Query degrade record %#v", degradeRecord)
 		return dns.RcodeSuccess, nil
 	}

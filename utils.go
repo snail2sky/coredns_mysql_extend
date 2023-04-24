@@ -77,9 +77,13 @@ func (m *Mysql) degradeWrite(record record, dnsRecordInfo dnsRecordInfo) {
 func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, error) {
 	var records []record
 
-	rows := m.db.QueryRow(m.queryRecordSQL, zoneID, host, qType)
+	rows, err := m.db.Query(m.queryRecordSQL, zoneID, host, qType)
+	if err != nil {
+		logger.Errorf("Query record error: %s", err)
+		return nil, err
+	}
 
-	for {
+	for rows.Next() {
 		var record record
 		err := rows.Scan(&record.id, &record.zoneID, &record.name, &record.qType, &record.data, &record.ttl)
 		if err == sql.ErrNoRows {
@@ -101,6 +105,7 @@ func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, erro
 		}
 		records = append(records, record)
 	}
+	return records, nil
 }
 
 func (m *Mysql) makeAnswer(rrString string) (dns.RR, error) {
