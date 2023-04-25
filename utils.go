@@ -87,7 +87,6 @@ func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, erro
 		var record record
 		err := rows.Scan(&record.id, &record.zoneID, &record.name, &record.qType, &record.data, &record.ttl)
 		if err == sql.ErrNoRows {
-			queryDBCount.With(prometheus.Labels{"status": "success"}).Inc()
 			logger.Debugf("Query records in db used zone id %d, host %s, zone %s, type %s, records %#v", zoneID, host, zone, qType, records)
 
 			return records, nil
@@ -105,6 +104,7 @@ func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, erro
 		}
 		records = append(records, record)
 	}
+	queryDBCount.With(prometheus.Labels{"status": "success"}).Inc()
 	return records, nil
 }
 
