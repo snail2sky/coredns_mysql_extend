@@ -1,7 +1,6 @@
 package coredns_mysql_extend
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
@@ -86,11 +85,6 @@ func (m *Mysql) getRecords(zoneID int, host, zone, qType string) ([]record, erro
 	for rows.Next() {
 		var record record
 		err := rows.Scan(&record.id, &record.zoneID, &record.name, &record.qType, &record.data, &record.ttl)
-		if err == sql.ErrNoRows {
-			logger.Debugf("Query records in db used zone id %d, host %s, zone %s, type %s, records %#v", zoneID, host, zone, qType, records)
-
-			return records, nil
-		}
 		if err != nil {
 			queryDBCount.With(prometheus.Labels{"status": "fail"}).Inc()
 			logger.Debugf("Failed to get records for domain %s from database: %s", record.fqdn, err)
