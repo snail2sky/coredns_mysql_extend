@@ -131,8 +131,8 @@ CREATE TABLE IF NOT EXISTS records (
     `ttl` INT NOT NULL DEFAULT 120,
     `online` INT NOT NULL DEFAULT 0,
     PRIMARY KEY (id),
-    FOREIGN KEY (zone_id) REFERENCES ` + m.zonesTable + `(id)
-)
+    FOREIGN KEY (zone_id) REFERENCES zones(id)
+);
 
 -- Here are some test data
 -- First insert new zone
