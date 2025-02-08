@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  release:
+    types: [created]
+
+env:
+  GO_VERSION: 1.22
+  CGO_ENABLED: 0
+
+jobs:
+  build-binary:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+        os: [linux, darwin, windows]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set output
+        id: set_output
+        run: |
+          if [ ${{ matrix.os }} = "windows" ]; then
+              echo "exe=coredns-${{ matrix.os }}-${{ matrix.arch }}.exe" >> $GITHUB_OUTPUT
+          else
+              echo "exe=coredns-${{ matrix.os }}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build binary
+        run: |
+          git clone https://github.com/coredns/coredns.git
+          ln -s `pwd` coredns/plugin/
+          cd coredns
+          echo 'mysql:github.com/snail2sky/coredns_mysql_extend' >> plugin.cfg
+          go generate && go get
+          export GOOS=${{ matrix.os }}
+          export GOARCH=${{ matrix.arch }}
+          export CGO_ENABLED=${{ env.CGO_ENABLED }}
+          go build -o ${{ steps.set_output.outputs.exe }}
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: 
+          files: |
+            ${{ steps.set_output.outputs.exe }}
+
+  build-image:
+    runs-on: ubuntu-latest
+    # needs: build-binary
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set output
+        id: set_output
+        run: |
+          echo "tag=`basename ${{ github.ref }}`" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          docker buildx build --build-arg IMAGE=golang:1.22 --platform linux/amd64,linux/arm64 -t snail2sky/coredns:${{ steps.set_output.outputs.tag }} . --push
+          docker buildx build --build-arg IMAGE=golang:1.22 --platform linux/amd64,linux/arm64 -t snail2sky/coredns:latest . --push
