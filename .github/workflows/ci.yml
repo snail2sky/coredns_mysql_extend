@@ -48,6 +48,8 @@ jobs:
           export GOARCH=${{ matrix.arch }}
           export CGO_ENABLED=${{ env.CGO_ENABLED }}
           go build -o ${{ steps.set_output.outputs.exe }}
+          ls -lh
+          file ${{ steps.set_output.outputs.exe }}
 
       - name: Release
         uses: softprops/action-gh-release@v1
