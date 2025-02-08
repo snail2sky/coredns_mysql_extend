@@ -57,4 +57,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: 
           files: |
-            ${{ steps.set_output.outputs.exe }}
+            coredns/${{ steps.set_output.outputs.exe }}
